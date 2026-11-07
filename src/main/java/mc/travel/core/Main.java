@@ -70,7 +70,7 @@ public final class Main {
 
             step("4/6", "准备服务端核心");
             if (opt.installNeo) {
-                Engine.installNeoForge(root, cfg);
+                EngineInstaller.installNeoForge(root, cfg);
             }
             Engine.Resolved engine = Engine.resolve(root, cfg);
             if (engine == null) {
