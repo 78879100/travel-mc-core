@@ -1,20 +1,13 @@
 package mc.travel.core;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
-import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -23,6 +16,8 @@ import java.util.stream.Stream;
  * <p>默认引擎是 NeoForge（模组），首次运行会自动下载安装器并用国内镜像补依赖；
  * 如果 server/ 里已经放了 Youer 之类的混合核心或者 Paper，会优先使用用户放进去的核心。
  * 纯插件场景可以用 engine=paper 强制走 Paper。</p>
+ *
+ * <p>下载安装逻辑在 EngineInstaller。</p>
  */
 public final class Engine {
 
@@ -70,13 +65,6 @@ public final class Engine {
         }
     }
 
-    private static final String PAPER_API =
-            "https://fill.papermc.io/v3/projects/paper/versions/" + Util.MC_VERSION + "/builds";
-
-    private static final String OFFICIAL_MAVEN = "https://maven.neoforged.net/releases/";
-    private static final String DEFAULT_MIRROR = "https://bmclapi2.bangbang93.com/maven/";
-    private static final String FALLBACK_NEO_VERSION = "26.3.0.101";
-
     private Engine() {
     }
 
@@ -93,7 +81,7 @@ public final class Engine {
             if (existing != null) {
                 return Resolved.jar(existing);
             }
-            return downloadPaper(serverDir).orElse(null);
+            return EngineInstaller.downloadPaper(serverDir).orElse(null);
         }
 
         Resolved neo = findNeoForge(root);
@@ -107,7 +95,7 @@ public final class Engine {
         }
 
         log("  未检测到服务端核心，开始安装 NeoForge " + Util.MC_VERSION + "（模组模式）");
-        if (installNeoForge(root, cfg)) {
+        if (EngineInstaller.installNeoForge(root, cfg)) {
             neo = findNeoForge(root);
             if (neo != null) {
                 return neo;
@@ -119,7 +107,7 @@ public final class Engine {
         }
 
         log("  NeoForge 安装未完成，回退到 Paper " + Util.MC_VERSION + "（插件模式）");
-        return downloadPaper(serverDir).orElse(null);
+        return EngineInstaller.downloadPaper(serverDir).orElse(null);
     }
 
     /** 在 server/ 中挑选最合适的 core jar。 */
@@ -236,90 +224,48 @@ public final class Engine {
         }
     }
 
-    // ------------------------------------------------------------ NeoForge 安装
-
-    /** 下载安装器 → 运行安装器 → 缺口依赖走镜像补齐，最多三轮。 */
-    public static boolean installNeoForge(Path root, Config cfg) throws IOException {
-        Path serverDir = root.resolve("server");
-        Files.createDirectories(serverDir);
-        // 安装目录就是核心根目录：这样 mods/、world/、config/、eula.txt 都在同一层
-        Path gameDir = root;
-        String java = cfg.get("java", "java");
-        String mirror = normalizeMirror(cfg.get("neoforge-mirror", DEFAULT_MIRROR));
-
-        String requested = cfg.get("neoforge-version", "auto").trim();
-        String version = requested.isEmpty() || requested.equalsIgnoreCase("auto")
-                ? latestNeoForgeVersion(mirror)
-                : requested;
-        log("  目标版本: NeoForge " + version);
-
-        String fileName = "neoforge-" + version + "-installer.jar";
-        Path installer = serverDir.resolve(fileName);
-        if (!Files.isRegularFile(installer) || Files.size(installer) == 0) {
-            boolean ok = false;
-            String artifactPath = "net/neoforged/neoforge/" + version + "/" + fileName;
-            for (String base : installerSources(mirror)) {
-                String url = base + artifactPath;
-                try {
-                    log("  正在下载安装器: " + url);
-                    Util.ProgressBar bar = new Util.ProgressBar(fileName);
-                    long size = Util.download(url, installer, bar);
-                    bar.finish(size);
-                    ok = Files.size(installer) > 0;
-                    if (ok) {
-                        break;
-                    }
-                } catch (IOException e) {
-                    System.out.println();
-                    log("  下载失败: " + e.getMessage());
-                }
-            }
-            if (!ok) {
-                log("  [错误] 安装器下载失败，请检查网络，或在 travelmc.properties 里换 neoforge-mirror");
-                return false;
+    /** 按点分段做数值比较，a>b 返回正数。 */
+    static int compareVersions(String a, String b) {
+        String[] pa = splitVersion(a);
+        String[] pb = splitVersion(b);
+        int len = Math.max(pa.length, pb.length);
+        for (int i = 0; i < len; i++) {
+            int va = i < pa.length ? toInt(pa[i]) : 0;
+            int vb = i < pb.length ? toInt(pb[i]) : 0;
+            if (va != vb) {
+                return Integer.compare(va, vb);
             }
         }
-
-        Path installLog = serverDir.resolve("neoforge-install.log");
-        for (int attempt = 1; attempt <= 3; attempt++) {
-            log("  正在运行 NeoForge 安装器（第 " + attempt + "/3 次），日志: server/neoforge-install.log");
-            int code = runInstaller(java, installer, gameDir, installLog);
-            ensureCrossArgs(gameDir);
-            if (findNeoForge(gameDir) != null) {
-                log("  NeoForge " + version + " 安装完成");
-                return true;
-            }
-            int fetched = prefetchMissing(gameDir, installLog, mirror);
-            log("  安装器退出码 " + code + "，本轮从镜像补齐依赖 " + fetched + " 个");
-            if (fetched == 0 && code != 0 && attempt > 1) {
-                break;
-            }
-        }
-        log("  [错误] NeoForge 安装没有完成，安装器日志最后几行:");
-        printTail(installLog, 12);
-        return false;
+        return 0;
     }
 
-    private static int runInstaller(String java, Path installer, Path gameDir, Path logFile) {
-        List<String> cmd = new ArrayList<String>();
-        cmd.add(java);
-        cmd.add("-jar");
-        cmd.add(installer.toAbsolutePath().toString());
-        cmd.add("--installServer");
-        cmd.add(gameDir.toAbsolutePath().toString());
-        ProcessBuilder pb = new ProcessBuilder(cmd);
-        pb.directory(gameDir.toFile());
-        pb.redirectErrorStream(true);
-        pb.redirectOutput(logFile.toFile());
-        try {
-            Process p = pb.start();
-            return p.waitFor();
-        } catch (IOException e) {
-            log("  无法启动安装器: " + e.getMessage());
-            return -1;
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return -1;
+    private static String[] splitVersion(String version) {
+        List<String> parts = new ArrayList<String>();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < version.length(); i++) {
+            char c = version.charAt(i);
+            if (c >= '0' && c <= '9') {
+                sb.append(c);
+            } else if (sb.length() > 0) {
+                parts.add(sb.toString());
+                sb.setLength(0);
+            }
         }
+        if (sb.length() > 0) {
+            parts.add(sb.toString());
+        }
+        return parts.toArray(new String[0]);
+    }
+
+    private static int toInt(String s) {
+        try {
+            return Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    static void log(String message) {
+        System.out.println(message);
     }
 }
