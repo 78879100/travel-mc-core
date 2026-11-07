@@ -20,7 +20,7 @@ import java.util.Locale;
 public final class Util {
 
     public static final String CORE_NAME = "Travel MC Core";
-    public static final String CORE_VERSION = "1.0.0";
+    public static final String CORE_VERSION = "1.0.1";
     public static final String MC_VERSION = "26.3";
     /** 26.3 服务端要求 Java 25 及以上。 */
     public static final int MIN_JAVA = 25;
