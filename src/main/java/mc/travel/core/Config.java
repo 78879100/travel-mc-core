@@ -4,14 +4,25 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Properties;
 
 /**
- * travelmc.properties 的读写。首次运行自动生成，之后以文件内容为准。
+ * travelmc.properties 的读写。首次运行自动生成，之后以文件内容为准；
+ * 用户自己加的键在回写时会被保留。
  */
 public final class Config {
 
     public static final String FILE_NAME = "travelmc.properties";
+
+    private static final String[] KNOWN = {
+            "memory", "port", "motd", "max-players", "online-mode", "auto-restart", "auto-run",
+            "java", "auto-java", "engine", "neoforge-version", "neoforge-mirror",
+            "extra-jvm-args", "server-args"
+    };
 
     private final Path file;
     private final Properties props = new Properties();
@@ -67,66 +78,105 @@ public final class Config {
     }
 
     public void save() throws IOException {
+        Map<String, String> values = new LinkedHashMap<String, String>();
+        values.put("memory", get("memory", "4G"));
+        values.put("port", get("port", "25565"));
+        values.put("motd", get("motd", defaultMotd()));
+        values.put("max-players", get("max-players", "20"));
+        values.put("online-mode", get("online-mode", "true"));
+        values.put("auto-restart", get("auto-restart", "true"));
+        values.put("auto-run", get("auto-run", "true"));
+        values.put("java", get("java", "java"));
+        values.put("auto-java", get("auto-java", "true"));
+        values.put("engine", get("engine", "auto"));
+        values.put("neoforge-version", get("neoforge-version", "auto"));
+        values.put("neoforge-mirror", get("neoforge-mirror", "https://bmclapi2.bangbang93.com/maven"));
+        values.put("extra-jvm-args", get("extra-jvm-args", ""));
+        values.put("server-args", get("server-args", "nogui"));
+
         StringBuilder sb = new StringBuilder();
         sb.append("# ==============================================================\n");
-        sb.append("#  Travel MC Core 配置文件\n");
-        sb.append("#  修改后重新运行核心即可生效（脚本会在每次启动时自动重写）\n");
+        sb.append("#  Travel MC Core v").append(Util.CORE_VERSION).append(" 配置文件\n");
+        sb.append("#  Minecraft ").append(Util.MC_VERSION).append("  |  NeoForge 模组 + Bukkit 插件\n");
+        sb.append("#  修改后重新运行核心即可生效（start.bat / start.sh 会自动重写）\n");
         sb.append("# ==============================================================\n\n");
         sb.append("# 内存分配，例如 4G / 8G / 4096M。建议不超过物理内存的 70%\n");
-        sb.append("memory=").append(get("memory", "4G")).append('\n');
-        sb.append("\n# 端口\n");
-        sb.append("port=").append(get("port", "25565")).append('\n');
+        sb.append("memory=").append(values.get("memory")).append('\n');
+        sb.append("\n# 服务器端口\n");
+        sb.append("port=").append(values.get("port")).append('\n');
         sb.append("\n# 服务器列表里显示的描述\n");
-        sb.append("motd=").append(get("motd", "Travel MC  |  26.3  |  NeoForge + Paper")).append('\n');
+        sb.append("motd=").append(values.get("motd")).append('\n');
         sb.append("\n# 最大人数\n");
-        sb.append("max-players=").append(get("max-players", "20")).append('\n');
+        sb.append("max-players=").append(values.get("max-players")).append('\n');
         sb.append("\n# 正版验证（true=仅正版账号可进）\n");
-        sb.append("online-mode=").append(get("online-mode", "true")).append('\n');
+        sb.append("online-mode=").append(values.get("online-mode")).append('\n');
         sb.append("\n# 崩溃/关服后自动重启\n");
-        sb.append("auto-restart=").append(get("auto-restart", "true")).append('\n');
+        sb.append("auto-restart=").append(values.get("auto-restart")).append('\n');
         sb.append("\n# 运行核心后是否立即启动服务器\n");
-        sb.append("auto-run=").append(get("auto-run", "true")).append('\n');
-        sb.append("\n# 使用的 java 命令（可填绝对路径，例如 C:/Java/jdk-25/bin/java.exe）\n");
-        sb.append("java=").append(get("java", "java")).append('\n');
-        sb.append("\n# 引擎：auto=优先使用 server/ 内已有核心，没有则自动下载 Paper 26.3\n");
-        sb.append("engine=").append(get("engine", "auto")).append('\n');
-        sb.append("\n# NeoForge 版本（仅在安装 NeoForge 原生核心时使用）\n");
-        sb.append("neoforge-version=").append(get("neoforge-version", "26.3.0.99")).append('\n');
+        sb.append("auto-run=").append(values.get("auto-run")).append('\n');
+        sb.append("\n# 使用的 java（默认 java=自动寻找；也可填绝对路径，如 C:/Java/jdk-25/bin/java.exe）\n");
+        sb.append("java=").append(values.get("java")).append('\n');
+        sb.append("\n# 找不到 Java ").append(Util.MIN_JAVA).append(" 时是否自动下载 Temurin（约 50MB）\n");
+        sb.append("auto-java=").append(values.get("auto-java")).append('\n');
+        sb.append("\n# 引擎：auto=优先 NeoForge 模组服务端（server/ 里放了核心则直接用）\n");
+        sb.append("#       neoforge=只用 NeoForge    paper=只用 Paper（纯插件）\n");
+        sb.append("engine=").append(values.get("engine")).append('\n');
+        sb.append("\n# NeoForge 版本：auto=自动取 ").append(Util.MC_VERSION).append(" 线最新版本\n");
+        sb.append("neoforge-version=").append(values.get("neoforge-version")).append('\n');
+        sb.append("\n# NeoForge 依赖镜像，国内网络建议保留；填 none 可关闭\n");
+        sb.append("neoforge-mirror=").append(values.get("neoforge-mirror")).append('\n');
         sb.append("\n# 额外的 JVM 参数，例如 -XX:+UseZGC\n");
-        sb.append("extra-jvm-args=").append(get("extra-jvm-args", "")).append('\n');
+        sb.append("extra-jvm-args=").append(values.get("extra-jvm-args")).append('\n');
         sb.append("\n# 传给服务端核心的参数，保持 nogui 可减少内存占用\n");
-        sb.append("server-args=").append(get("server-args", "nogui")).append('\n');
+        sb.append("server-args=").append(values.get("server-args")).append('\n');
+
+        // 保留用户自行添加的键
+        List<String> extras = new ArrayList<String>();
+        for (Object rawKey : props.keySet()) {
+            String key = String.valueOf(rawKey);
+            boolean known = false;
+            for (String k : KNOWN) {
+                if (k.equals(key)) {
+                    known = true;
+                    break;
+                }
+            }
+            if (!known) {
+                extras.add(key);
+            }
+        }
+        if (!extras.isEmpty()) {
+            java.util.Collections.sort(extras);
+            sb.append("\n# --- 自定义键 ---\n");
+            for (String key : extras) {
+                sb.append(key).append('=').append(props.getProperty(key, "")).append('\n');
+            }
+        }
         Util.writeText(file, sb.toString(), false);
+    }
+
+    static String defaultMotd() {
+        return "Travel MC  |  " + Util.MC_VERSION + "  |  NeoForge";
     }
 
     private static String template(String coreVersion) {
         return "# ==============================================================\n"
                 + "#  Travel MC Core v" + coreVersion + " 配置文件\n"
-                + "#  修改后重新运行核心即可生效（脚本会在每次启动时自动重写）\n"
+                + "#  Minecraft " + Util.MC_VERSION + "  |  NeoForge 模组 + Bukkit 插件\n"
                 + "# ==============================================================\n\n"
-                + "# 内存分配，例如 4G / 8G / 4096M。建议不超过物理内存的 70%\n"
                 + "memory=4G\n\n"
-                + "# 端口\n"
                 + "port=25565\n\n"
-                + "# 服务器列表里显示的描述\n"
-                + "motd=Travel MC  |  26.3  |  NeoForge + Paper\n\n"
-                + "# 最大人数\n"
+                + "motd=" + defaultMotd() + "\n\n"
                 + "max-players=20\n\n"
-                + "# 正版验证（true=仅正版账号可进）\n"
                 + "online-mode=true\n\n"
-                + "# 崩溃/关服后自动重启\n"
                 + "auto-restart=true\n\n"
-                + "# 运行核心后是否立即启动服务器\n"
                 + "auto-run=true\n\n"
-                + "# 使用的 java 命令（可填绝对路径，例如 C:/Java/jdk-25/bin/java.exe）\n"
                 + "java=java\n\n"
-                + "# 引擎：auto=优先使用 server/ 内已有核心，没有则自动下载 Paper 26.3\n"
+                + "auto-java=true\n\n"
                 + "engine=auto\n\n"
-                + "# NeoForge 版本（仅在安装 NeoForge 原生核心时使用）\n"
-                + "neoforge-version=26.3.0.99\n\n"
-                + "# 额外的 JVM 参数，例如 -XX:+UseZGC\n"
+                + "neoforge-version=auto\n\n"
+                + "neoforge-mirror=https://bmclapi2.bangbang93.com/maven\n\n"
                 + "extra-jvm-args=\n\n"
-                + "# 传给服务端核心的参数，保持 nogui 可减少内存占用\n"
                 + "server-args=nogui\n";
     }
 }
