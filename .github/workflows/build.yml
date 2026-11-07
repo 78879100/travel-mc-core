@@ -36,12 +36,13 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.1
-          name: Travel MC Core v1.0.1
+          tag_name: v1.0.2
+          name: Travel MC Core v1.0.2
           body: |
             Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）
 
-            - 双击 jar：自动补 Java 25 → 自动装 NeoForge 26.3 → 自动生成 start.bat → 自动开服
+            - 双击 jar：自动补 Java 25 -> 自动装 NeoForge 26.3 -> 自动生成 start.bat -> 自动开服
+            - 下载改为动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-244.jar`
             - 安装器依赖走国内镜像补齐，网络受限也能装上
             - mods/ 放模组直接生效；server/ 放入 Youer 等混合核心即同时支持插件
             - engine=paper 可切换纯插件模式（Paper 26.3，SHA-256 校验）
