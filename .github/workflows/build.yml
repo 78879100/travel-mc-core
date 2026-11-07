@@ -1,0 +1,48 @@
+name: Build & Release
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 25
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+
+      - name: Build TravelMC-Core.jar
+        run: |
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TravelMC-Core
+          path: dist/TravelMC-Core.jar
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.0
+          name: Travel MC Core v1.0.0
+          body: |
+            Minecraft Java 26.3 服务端核心（NeoForge + Paper）
+
+            - 双击 jar 自动生成 start.bat 并开服
+            - 自动下载 Paper 26.3（SHA-256 校验）
+            - server/ 放入 Youer 即可升级为插件 + 模组双支持
+          files: dist/TravelMC-Core.jar
+          make_latest: true

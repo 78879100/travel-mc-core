@@ -1,0 +1,7 @@
+build/
+dist/*.jar
+*.log
+test-server/
+.idea/
+*.iml
+.DS_Store
