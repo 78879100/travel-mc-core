@@ -112,4 +112,211 @@ final class EngineInstaller {
             return -1;
         }
     }
+
+    /**
+     * 安装器在国内网络下会卡在 maven.neoforged.net。这里读安装器日志里列出的下载地址，
+     * 把缺的 jar 用镜像直接放进 libraries/，下一轮安装器就能跳过下载。
+     */
+    private static int prefetchMissing(Path gameDir, Path logFile, String mirror) {
+        if (!Files.isRegularFile(logFile)) {
+            return 0;
+        }
+        List<String> urls = new ArrayList<String>();
+        try {
+            List<String> lines = Files.readAllLines(logFile, StandardCharsets.UTF_8);
+            Pattern p = Pattern.compile("Downloading library from (https://\\S+)");
+            for (String line : lines) {
+                Matcher m = p.matcher(line);
+                if (m.find()) {
+                    urls.add(m.group(1));
+                }
+            }
+        } catch (IOException e) {
+            return 0;
+        }
+        int fetched = 0;
+        for (int index = 0; index < urls.size(); index++) {
+            String url = urls.get(index);
+            String rel = libraryRelativePath(url);
+            if (rel == null) {
+                continue;
+            }
+            Path target = gameDir.resolve("libraries").resolve(rel);
+            if (Files.isRegularFile(target) && sizeOf(target) > 0) {
+                continue;
+            }
+            if (mirror.isEmpty()) {
+                continue;
+            }
+            String name = target.getFileName().toString();
+            Util.ProgressBar bar = new Util.ProgressBar(name + "  (依赖 " + (index + 1) + "/" + urls.size() + ")");
+            IOException last = null;
+            for (int attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    long size = Util.download(mirror + rel, target, bar);
+                    bar.finish(size);
+                    fetched++;
+                    last = null;
+                    break;
+                } catch (IOException e) {
+                    last = e;
+                    System.out.println();
+                    Util.sleep(1500);
+                }
+            }
+            if (last != null) {
+                Engine.log("  依赖补齐失败: " + rel + " (" + last.getMessage() + ")");
+            }
+        }
+        return fetched;
+    }
+
+    private static long sizeOf(Path p) {
+        try {
+            return Files.size(p);
+        } catch (IOException e) {
+            return 0;
+        }
+    }
+
+    /** https://maven.neoforged.net/releases/net/... 转成 net/... */
+    private static String libraryRelativePath(String url) {
+        String marker = "maven.neoforged.net/releases/";
+        int idx = url.indexOf(marker);
+        if (idx < 0) {
+            return null;
+        }
+        String rel = url.substring(idx + marker.length());
+        int q = rel.indexOf('?');
+        return q >= 0 ? rel.substring(0, q) : rel;
+    }
+
+    private static List<String> installerSources(String mirror) {
+        List<String> list = new ArrayList<String>();
+        if (!mirror.isEmpty()) {
+            list.add(mirror);
+        }
+        list.add(OFFICIAL_MAVEN);
+        return list;
+    }
+
+    private static String normalizeMirror(String mirror) {
+        String m = mirror == null ? "" : mirror.trim();
+        if (m.equalsIgnoreCase("none") || m.equalsIgnoreCase("off")) {
+            return "";
+        }
+        if (m.isEmpty()) {
+            return DEFAULT_MIRROR;
+        }
+        if (!m.endsWith("/")) {
+            m = m + "/";
+        }
+        return m;
+    }
+
+    /** 从镜像的 maven-metadata.xml 里挑出 26.3 线的最高版本。 */
+    static String latestNeoForgeVersion(String mirror) {
+        List<String> bases = new ArrayList<String>();
+        if (!mirror.isEmpty()) {
+            bases.add(mirror);
+        }
+        bases.add(OFFICIAL_MAVEN);
+        for (String base : bases) {
+            String found = latestFrom(base + "net/neoforged/neoforge/maven-metadata.xml");
+            if (found != null) {
+                return found;
+            }
+        }
+        Engine.log("  版本列表获取失败，使用默认 " + FALLBACK_NEO_VERSION);
+        return FALLBACK_NEO_VERSION;
+    }
+
+    private static String latestFrom(String url) {
+        try {
+            String xml = Util.httpText(url);
+            String best = null;
+            Matcher m = Pattern.compile("<version>(" + Pattern.quote(Util.MC_VERSION) + "\\.\\d+)</version>").matcher(xml);
+            while (m.find()) {
+                String v = m.group(1);
+                if (best == null || Engine.compareVersions(v, best) > 0) {
+                    best = v;
+                }
+            }
+            return best;
+        } catch (IOException e) {
+            Engine.log("  镜像不可用（" + e.getMessage() + "），换下一个源");
+            return null;
+        }
+    }
+
+    private static void printTail(Path file, int lines) {
+        try {
+            List<String> all = Files.readAllLines(file, StandardCharsets.UTF_8);
+            int from = Math.max(0, all.size() - lines);
+            for (int i = from; i < all.size(); i++) {
+                String line = all.get(i);
+                if (!line.contains("at java.") && !line.contains("at net.minecraftforge")) {
+                    Engine.log("    " + line);
+                }
+            }
+        } catch (IOException ignored) {
+            // 日志都读不到就不再报错
+        }
+    }
+
+    /** 从官方 Downloads API 获取 Paper 26.3 并校验 SHA-256 后下载。 */
+    static java.util.Optional<Engine.Resolved> downloadPaper(Path serverDir) throws IOException {
+        String json;
+        try {
+            json = Util.httpText(PAPER_API);
+        } catch (IOException e) {
+            Engine.log("  官方 API 不可达: " + e.getMessage());
+            return java.util.Optional.empty();
+        }
+
+        int marker = json.indexOf("\"server:default\"");
+        if (marker < 0) {
+            marker = 0;
+        }
+        String slice = json.substring(marker, Math.min(json.length(), marker + 2000));
+
+        Matcher urlMatcher = Pattern.compile("\"url\"\\s*:\\s*\"(https://[^\"]+\\.jar)\"").matcher(slice);
+        if (!urlMatcher.find()) {
+            Engine.log("  未能从 API 响应中解析出下载地址");
+            return java.util.Optional.empty();
+        }
+        String url = urlMatcher.group(1);
+        String fileName = url.substring(url.lastIndexOf('/') + 1);
+
+        String sha256 = null;
+        Matcher shaMatcher = Pattern.compile("\"sha256\"\\s*:\\s*\"([0-9a-fA-F]{64})\"").matcher(slice);
+        if (shaMatcher.find()) {
+            sha256 = shaMatcher.group(1).toLowerCase(Locale.ROOT);
+        }
+
+        Path target = serverDir.resolve(fileName);
+        if (Files.exists(target) && sha256 != null) {
+            String actual = Util.sha256(target);
+            if (actual.equalsIgnoreCase(sha256)) {
+                Engine.log("  已存在且校验通过: " + fileName);
+                return java.util.Optional.of(Engine.Resolved.jar(target));
+            }
+        }
+
+        Engine.log("  正在下载 " + fileName);
+        Util.ProgressBar bar = new Util.ProgressBar(fileName);
+        long size = Util.download(url, target, bar);
+        bar.finish(size);
+        Engine.log("  下载完成: " + Util.human(size));
+
+        if (sha256 != null) {
+            String actual = Util.sha256(target);
+            if (!actual.equalsIgnoreCase(sha256)) {
+                Files.deleteIfExists(target);
+                throw new IOException("SHA-256 校验失败，文件已删除，请重试");
+            }
+            Engine.log("  SHA-256 校验通过");
+        }
+        return java.util.Optional.of(Engine.Resolved.jar(target));
+    }
 }
