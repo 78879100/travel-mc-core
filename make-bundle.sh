@@ -64,7 +64,7 @@ PY_PAPER
 echo "[4/4] 生成便携启动脚本并打包"
 # 打包后配置里的 java= 和启动脚本里的 java 路径都是构建机的，换机器就失效。
 # 所以包里的 start.bat / start.sh 改成「先跑核心」，由核心去找 Java 25（缺了自动下载）、
-# 认出现成的 NeoForge / Paper，再生成真正带绕对 java 路径的启动脚本并开服。
+# 认出现成的 NeoForge / Paper，再生成真正带绝对 java 路径的启动脚本并开服。
 python3 - "$BUNDLE" <<'PY_LAUNCHER'
 import os, re, sys
 
@@ -81,21 +81,34 @@ if os.path.exists(prop):
             out.append(line)
     open(prop, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
 
-bat = """@echo off
+bat = r"""@echo off
 chcp 65001 >nul
 title Travel MC  Minecraft 26.3
 cd /d "%~dp0"
-where java >nul 2>nul
-if errorlevel 1 (
+
+set "JAVA="
+where java >nul 2>nul && set "JAVA=java"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Java\jdk*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Java\jre*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Eclipse Adoptium\jdk*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Microsoft\jdk*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Zulu\zulu*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\Amazon Corretto\jdk*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%ProgramFiles%\BellSoft\LibericaJDK*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+if not defined JAVA for /d %%d in ("%LocalAppData%\Programs\Eclipse Adoptium\jdk*") do if exist "%%d\bin\java.exe" set "JAVA=%%d\bin\java.exe"
+
+if not defined JAVA (
   echo.
   echo   [错误] 这台机器上没有找到 java
-  echo   请安装 Java 25: https://adoptium.net/
-  echo   装好后再双击本脚本，或直接双击 TravelMC-Core.jar
+  echo   请安装 Java 25+: https://adoptium.net/
+  echo   或者直接双击本目录里的 TravelMC-Core.jar（双击 jar 会用它自己找到的 java）
   echo.
   pause
   exit /b 1
 )
-java -jar "TravelMC-Core.jar"
+
+echo   使用 Java: %JAVA%
+"%JAVA%" -jar "TravelMC-Core.jar"
 echo.
 pause
 """
