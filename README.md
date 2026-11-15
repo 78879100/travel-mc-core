@@ -26,6 +26,7 @@
 | --- | --- |
 | 自动补 Java | 找不到 Java 25 时自动下载 Temurin 25 到 `runtime/`，不用手动装 |
 | 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-244.jar` |
+| 单窗口运行 | 服务器直接在核心所在的那个窗口里启动，不会再弹出第二个 cmd 窗口，也没有蓝底配色 |
 | 自动装 NeoForge | 首次运行自动下载 NeoForge 26.3 安装器，依赖走国内镜像补齐，装完即可用 |
 | 自動生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`，内含巨幅 TRAVEL MC 横幅 |
 | 自动开服 | 准备完直接拉起服务器，崩服后 5 秒自动重启 |
@@ -50,7 +51,7 @@ TRAVEL MC 横幅
  [3/6] 准备 Java 25 运行时  本机有就用，没有就下载 Temurin 25 到 runtime/
  [4/6] 准备服务端核心      安装 NeoForge 26.3（镜像补依赖，最多重试 3 轮）
  [5/6] 生成启动脚本        start.bat / start.sh，写入横幅、内存、端口
- [6/6] 启动服务器          直接开服，日志同步到控制台
+ [6/6] 启动服务器          直接在本窗口开服，日志同步到控制台
 ```
 
 ## 目录结构
@@ -143,22 +144,22 @@ JAVA_HOME=/path/to/jdk25 ./build.sh
 推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar 挂到 Release：
 
 ```bash
-git tag v1.0.2 && git push origin v1.0.2
+git tag v1.0.3 && git push origin v1.0.3
 ```
 
 源码结构：
 
 ```
 src/main/java/mc/travel/core/
-├── Main.java            入口、参数解析、6 步流程编排
-├── Banner.java          巨幅 TRAVEL MC 横幅
-├── Config.java          travelmc.properties 读写
-├── Setup.java           目录、eula、server.properties、使用说明
-├── JavaEnv.java         Java 25 定位 / 自动下载 / 解压
-├── Engine.java          引擎识别、NeoForge 产物定位、版本比较
-├── EngineInstaller.java 安装器下载与运行、镜像补依赖、Paper 下载
-├── Scripts.java         start.bat / start.sh 生成
-└── Util.java            下载、进度条、校验、编码等工具
+├── Main.java              入口、参数解析、6 步流程编排（Windows 在本窗口运行 start.bat）
+├── Banner.java            巨幅 TRAVEL MC 横幅
+├── Config.java            travelmc.properties 读写
+├── Setup.java             目录、eula、server.properties、使用说明
+├── JavaEnv.java           Java 25 定位 / 自动下载 / 解压
+├── Engine.java            引擎识别、NeoForge 产物定位、版本比较
+├── EngineInstaller.java   安装器下载与运行、镜像补依赖、Paper 下载
+├── Scripts.java           start.bat / start.sh 生成
+└── Util.java              下载、进度条、校验、编码等工具
 ```
 
 ## 常见问题
@@ -171,6 +172,9 @@ src/main/java/mc/travel/core/
 
 **下载时进度条一直在刷？**
 进度条用 `\r` 原地重绘，最快 12 帧每秒，不会刷屏；下载完成后会换行，后面的日志不会和它糊在一起。如果终端不支持回车覆盖（少数旧 cmd），会看到多行进度，不影响下载结果。
+
+**会弹出好几个窗口吗？**
+不会。运行核心后服务器直接在同一个窗口里跑（不会再另开 cmd），窗口也是系统默认配色，不再是蓝底蓝字；关闭这个窗口就停服。
 
 **端口能连上吗？**
 默认 25565，记得在系统防火墙 / 云服务器安全组放行。
