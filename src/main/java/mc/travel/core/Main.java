@@ -170,17 +170,17 @@ public final class Main {
 
     private static int launch(Path root) throws IOException {
         if (Util.isWindows()) {
-            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "start", "", "start.bat");
+            // 直接在本窗口里执行 start.bat：不再用 start 另开 cmd 窗口，全程只有一个窗口
+            ProcessBuilder pb = new ProcessBuilder("cmd.exe", "/c", "start.bat");
             pb.directory(root.toFile());
             pb.inheritIO();
             Process process = pb.start();
             try {
-                process.waitFor();
+                return process.waitFor();
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
+                return 130;
             }
-            System.out.println("  已在新窗口启动服务器，本窗口可以关闭。");
-            return 0;
         }
         String shell = Files.isExecutable(Paths.get("/bin/bash")) ? "bash" : "sh";
         ProcessBuilder pb = new ProcessBuilder(shell, "start.sh");
