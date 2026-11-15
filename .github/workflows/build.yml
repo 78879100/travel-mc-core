@@ -27,27 +27,44 @@ jobs:
           chmod +x build.sh
           ./build.sh
 
+      - name: Build TravelMC-Core-Full.zip（内置 NeoForge + Paper 核心）
+        run: |
+          chmod +x make-bundle.sh
+          ./make-bundle.sh
+
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: TravelMC-Core
-          path: dist/TravelMC-Core.jar
+          path: |
+            dist/TravelMC-Core.jar
+            dist/TravelMC-Core-Full.zip
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.3
-          name: Travel MC Core v1.0.3
+          tag_name: v1.0.4
+          name: Travel MC Core v1.0.4
           body: |
             Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）
 
-            - 双击 jar：自动补 Java 25 -> 自动装 NeoForge 26.3 -> 自动生成 start.bat -> 自动开服
-            - 全程只开一个窗口：服务器直接在当前窗口运行，不另开 cmd 窗口，也没有蓝底配色
-            - 下载改为动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-244.jar`
-            - 安装器依赖走国内镜像补齐，网络受限也能装上
-            - mods/ 放模组直接生效；server/ 放入 Youer 等混合核心即同时支持插件
-            - engine=paper 可切换纯插件模式（Paper 26.3，SHA-256 校验）
+            **两种下载，按需选一个：**
 
-            附件：TravelMC-Core.jar（单文件，无需任何依赖）
-          files: dist/TravelMC-Core.jar
+            1. `TravelMC-Core-Full.zip`（推荐，约 186 MB）——**包内直接就有两个核心**：
+               - NeoForge 26.3.0.101 的完整服务端依赖（`libraries/`、`unix_args.txt`、`win_args.txt`）
+               - Paper 26.3 的 `server/paper-26.3-252.jar`（Bukkit 插件核心）
+               - 解压后双击 `start.bat`（Linux/macOS 用 `start.sh`）直接开服，不用再下载任何核心
+               - 想切纯插件模式：把 `travelmc.properties` 的 `engine` 改成 `paper`
+            2. `TravelMC-Core.jar`（48 KB）——只有一个 jar，首次运行自己联网下载并安装两个核心
+
+            通用特性：
+
+            - 双击 jar：自动补 Java 25 -> 自动装 NeoForge 26.3 -> 自动生成 start.bat -> 自动开服
+            - 下载改为动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar`
+            - 全程只开一个窗口：服务器直接在当前窗口运行，不另开 cmd 窗口，也没有蓝底配色
+            - 安装器依赖走国内镜像补齐，网络受限也能装上
+            - mods/ 放模组直接生效；plugins/ 放插件（`engine=paper` 时全量支持）
+          files: |
+            dist/TravelMC-Core.jar
+            dist/TravelMC-Core-Full.zip
           make_latest: true
