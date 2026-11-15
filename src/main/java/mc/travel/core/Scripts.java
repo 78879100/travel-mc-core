@@ -30,6 +30,9 @@ public final class Scripts {
     public static void write(Path root, Config cfg, Engine.Resolved engine) throws IOException {
         Path bat = root.resolve("start.bat");
         Path sh = root.resolve("start.sh");
+        // 大字横幅单独存一个 UTF-8 文件：cmd 解析含方块字的 .bat 会因 GBK 解码吞字节而报错，
+        // 用 type 原样输出字节则不会。
+        Util.writeText(root.resolve("banner.txt"), Banner.text(), false);
         Util.writeText(bat, buildBat(root, cfg, engine), true);
         Util.writeText(sh, buildSh(root, cfg, engine), false);
         try {
@@ -97,7 +100,7 @@ public final class Scripts {
         sb.append("cd /d \"%~dp0\"\n");
         sb.append("set \"JAVA=").append(javaExe).append("\"\n");
         sb.append("\n");
-        sb.append(batBanner());
+        sb.append("if exist \"banner.txt\" (type \"banner.txt\") else (echo   TRAVEL MC)\n");
         sb.append("\n");
         sb.append("echo   Travel MC Core v").append(Util.CORE_VERSION)
                 .append("   -   Minecraft ").append(Util.MC_VERSION)
@@ -215,19 +218,4 @@ public final class Scripts {
         return sb.toString();
     }
 
-    /** 把大字横幅转成 Windows 批处理的 echo 行。 */
-    private static String batBanner() {
-        String banner = Banner.text();
-        StringBuilder sb = new StringBuilder();
-        String[] lines = banner.split("\n");
-        for (String line : lines) {
-            String trimmed = line.replace("\r", "");
-            if (trimmed.trim().isEmpty()) {
-                sb.append("echo.\n");
-            } else {
-                sb.append("echo ").append(trimmed).append('\n');
-            }
-        }
-        return sb.toString();
-    }
 }
