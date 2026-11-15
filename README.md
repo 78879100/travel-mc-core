@@ -26,10 +26,11 @@
 | --- | --- |
 | 自动补 Java | 找不到 Java 25 时自动下载 Temurin 25 到 `runtime/`，不用手动装 |
 | 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar` |
+| 启动进度条 | 准备启动的 6 个步骤也走进度条：`[###############-------]  66.7%  [4/6] 准备服务端核心` |
 | 单窗口运行 | 服务器直接在核心所在的那个窗口里启动，不会再弹出第二个 cmd 窗口，也没有蓝底配色 |
 | 自动装 NeoForge | 首次运行自动下载 NeoForge 26.3 安装器，依赖走国内镜像补齐，装完即可用 |
 | 自带两个核心 | Release 提供 `TravelMC-Core-Full.zip`，包内直接带 NeoForge 26.3 依赖库 + Paper 26.3 服务端 jar，解压双击就能开服 |
-| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`，内含巨幅 TRAVEL MC 横幅 |
+| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`；巨幅 TRAVEL MC 横幅由 UTF-8 的 `banner.txt` 承载，`start.bat` 用 `type` 输出，中文 Windows 不乱码 |
 | 自动开服 | 准备完直接拉起服务器，崩服后 5 秒自动重启 |
 | 模组 + 插件 | 原生 NeoForge 跑模组；`server/` 放入 Youer 之类混合核心即同时跑插件；纯插件可切 Paper |
 | 自带优化参数 | 默认 Aikar GC 参数 + UTF-8 控制台，4G 内存起步即可开服 |
@@ -56,15 +57,20 @@
 
 ### 首次运行会做什么
 
+准备过程是进度条形态，一行一个步骤：
+
 ```
-TRAVEL MC 横幅
- [1/6] 检查运行环境        识别系统、架构、当前 Java
- [2/6] 初始化服务器目录    server/ mods/ plugins/ config/ world/ logs/ backups/
- [3/6] 准备 Java 25 运行时  本机有就用，没有就下载 Temurin 25 到 runtime/
- [4/6] 准备服务端核心      安装 NeoForge 26.3（镜像补依赖，最多重试 3 轮）
- [5/6] 生成启动脚本        start.bat / start.sh，写入横幅、内存、端口
- [6/6] 启动服务器          直接在本窗口开服，日志同步到控制台
+巨幅 TRAVEL MC 横幅（来自 banner.txt）
+
+  [####----------------------]  16.7%  [1/6] 检查运行环境
+  [#########-----------------]  33.3%  [2/6] 初始化服务器目录
+  [#############-------------]  50.0%  [3/6] 准备 Java 25 运行时
+  [#################---------]  66.7%  [4/6] 准备服务端核心
+  [######################----]  83.3%  [5/6] 生成启动脚本
+  [##########################] 100.0%  [6/6] 启动服务器
 ```
+
+每个步骤下面会接着打印细节（识别到的系统与 Java、目录清单、引擎版本、模组/插件数量）；第 4 步里下载核心时再叠一层带文件名的下载进度条。
 
 ## 目录结构
 
@@ -74,6 +80,7 @@ TRAVEL MC 横幅
 你的文件夹/
 ├── TravelMC-Core.jar       核心（只剩它也能重新生成一切）
 ├── start.bat               Windows 启动脚本（自动生成）
+├── banner.txt              巨幅 TRAVEL MC 横幅（UTF-8，start.bat 用 type 输出）
 ├── start.sh                Linux / macOS 启动脚本（自动生成）
 ├── travelmc.properties     核心配置
 ├── server.properties       服务器配置（MOTD 已预设 Travel MC）
@@ -160,22 +167,22 @@ JAVA_HOME=/path/to/jdk25 ./make-bundle.sh
 推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar 和完整包 zip 一起挂到 Release：
 
 ```bash
-git tag v1.0.4 && git push origin v1.0.4
+git tag v1.0.5 && git push origin v1.0.5
 ```
 
 源码结构：
 
 ```
 src/main/java/mc/travel/core/
-├── Main.java              入口、参数解析、6 步流程编排（Windows 在本窗口运行 start.bat）
+├── Main.java              入口、参数解析、6 步进度条流程编排（Windows 在本窗口运行 start.bat）
 ├── Banner.java            巨幅 TRAVEL MC 横幅
 ├── Config.java            travelmc.properties 读写
 ├── Setup.java             目录、eula、server.properties、使用说明
 ├── JavaEnv.java           Java 25 定位 / 自动下载 / 解压
 ├── Engine.java            引擎识别、NeoForge 产物定位、版本比较
 ├── EngineInstaller.java   安装器下载与运行、镜像补依赖、Paper 下载
-├── Scripts.java           start.bat / start.sh 生成
-└── Util.java              下载、进度条、校验、编码等工具
+├── Scripts.java           start.bat / start.sh / banner.txt 生成
+└── Util.java              下载、进度条、启动步骤进度条、校验、编码等工具
 ```
 
 ## 常见问题
@@ -193,14 +200,17 @@ src/main/java/mc/travel/core/
 **会弹出好几个窗口吗？**
 不会。运行核心后服务器直接在同一个窗口里跑（不会再另开 cmd），窗口也是系统默认配色，不再是蓝底蓝字；关闭这个窗口就停服。
 
+**`start.bat` 报 `'��║' is not recognized as an internal or external command`？**
+这是 v1.0.4 及更早版本的 BUG，v1.0.5 已修复：横幅不再 `echo` 进 `.bat`（中文 Windows 用 GBK 解析 UTF-8 批处理会吞字节），改为 `banner.txt` + `type` 原样输出。升级 jar 后重新运行一次核心，`start.bat` 和 `banner.txt` 会自动重写。
+
+**控制台方块字是乱码？**
+启动脚本已自动 `chcp 65001`。若还是不清晰，换 Windows Terminal 或等宽字体（Cascadia Mono / Consolas）。
+
 **完整包能不能离线开？**
 NeoForge 模式可以 —— 依赖库和核心都在包里，解压就能开（Java 25 本机没有的话仍会自动下一次）。Paper 模式第一次启动时 Paper 会自己拉一个 Mojang 原版 jar 做底子，这是 Paper 自身行为。
 
 **端口能连上吗？**
 默认 25565，记得在系统防火墙 / 云服务器安全组放行。
-
-**控制台方块字是乱码？**
-用 Windows Terminal，或在 cmd 里先 `chcp 65001`。`start.bat` 已经自动设了 UTF-8。
 
 **内存给多少？**
 4G 能开服带几个模组；几十个模组建议 6–8G。别超过物理内存的 70%。
