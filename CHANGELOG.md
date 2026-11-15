@@ -1,5 +1,15 @@
 # 更新日志
 
+## v1.0.5
+
+- 修复大字横幅在中文 Windows 控制台报 `'��║' is not recognized as an internal or external command`
+  - 原因：中文 Windows 控制台代码页是 GBK(936)，cmd 解析 UTF-8 的 `.bat` 时按 GBK 解码；`║`/`═` 的字节序列会把后面的 ASCII 字节当成 GBK 尾字节吞掉，token 错位被当成命令名。`chcp 65001` 写在文件里也救不了读取期解码
+  - 改法：横幅不再塞进 `.bat`，核心单独生成 UTF-8 的 `banner.txt`，`start.bat` 改成 `if exist "banner.txt" (type "banner.txt") else (echo   TRAVEL MC)`；`type` 原样输出字节，不参与 cmd 解析
+  - `start.sh` 仍用 heredoc 内嵌横幅（bash 无此问题）
+- 启动准备流程改成进度条：`Util.StepBar`（26 格 + 百分比 + `[n/6] 步骤名`），6 个准备步骤各占一行
+  - 形如 `[###############-------]  66.7%  [4/6] 准备服务端核心`
+- 实测：Windows 11 + JDK 26 上双击 `start.bat`，横幅完整显示、无任何 `is not recognized` 报错，服务器 `Done (0.336s)` 正常开服
+
 ## v1.0.4
 
 - Release 新增 `TravelMC-Core-Full.zip`（约 186 MB）：包内直接带两个核心，解压双击 `start.bat` 就能开服
