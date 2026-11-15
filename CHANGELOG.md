@@ -1,5 +1,15 @@
 # 更新日志
 
+## v1.0.4
+
+- Release 新增 `TravelMC-Core-Full.zip`（约 186 MB）：包内直接带两个核心，解压双击 `start.bat` 就能开服
+  - NeoForge 26.3.0.101 完整服务端依赖：`libraries/net/neoforged/...`、`unix_args.txt`、`win_args.txt`
+  - Paper 26.3 的 Bukkit 核心：`server/paper-26.3-252.jar`（SHA-256 校验通过，52.7 MB）
+  - 打包时把 `travelmc.properties` 的 `java=` 复原为 `java`，换机器也不会指向构建机路径
+  - 自动清掉安装器日志、`world/`、`logs/`、`usercache.json` 等运行痕迹
+- 新增 `make-bundle.sh`：一条命令生成完整包；CI 每次构建都会自动打这个 zip 并一起挂到 Release
+- 实测：完整包解压后直接开服成功（NeoForge 引擎 `Done (3.057s)`；`engine=paper` 时识别为 `paper-26.3-252.jar`）
+
 ## v1.0.3
 
 - 只开一个窗口：运行核心后服务器直接在**当前窗口**里跑，不再用 `start` 另开一个新的 cmd 窗口
