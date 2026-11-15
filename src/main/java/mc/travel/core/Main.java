@@ -39,13 +39,14 @@ public final class Main {
             Config cfg = Config.load(root);
             boolean changed = applyOverrides(cfg, opt);
 
-            step("1/6", "检查运行环境");
-            System.out.println("  工作目录: " + root);
+            Util.StepBar bar = new Util.StepBar(6);
+            bar.step("检查运行环境");
+            System.out.println("   工作目录: " + root);
             System.out.println("  系统: " + System.getProperty("os.name") + " " + System.getProperty("os.arch")
                     + "  |  核心运行在 Java " + Util.javaVersion());
             System.out.println("  目标: Minecraft " + Util.MC_VERSION + "（需要 Java " + Util.MIN_JAVA + " 及以上）");
 
-            step("2/6", "初始化服务器目录");
+            bar.step("初始化服务器目录");
             Setup.createLayout(root);
             Setup.ensureEula(root);
             Setup.ensureServerProperties(root, cfg);
@@ -53,7 +54,7 @@ public final class Main {
             System.out.println("  server / mods / plugins / config / world / logs / backups 已就绪");
             System.out.println("  已写入 eula=true（继续使用即表示同意 Minecraft EULA）");
 
-            step("3/6", "准备 Java " + Util.MIN_JAVA + " 运行时");
+            bar.step("准备 Java " + Util.MIN_JAVA + " 运行时");
             String java = JavaEnv.resolve(root, cfg);
             if (java == null) {
                 System.out.println();
@@ -68,7 +69,7 @@ public final class Main {
             }
             System.out.println("  使用: " + java + "（Java " + JavaEnv.versionOf(java) + "）");
 
-            step("4/6", "准备服务端核心");
+            bar.step("准备服务端核心");
             if (opt.installNeo) {
                 EngineInstaller.installNeoForge(root, cfg);
             }
@@ -83,7 +84,7 @@ public final class Main {
             }
             System.out.println("  引擎: " + engine.displayName);
 
-            step("5/6", "生成启动脚本");
+            bar.step("生成启动脚本");
             Scripts.write(root, cfg, engine);
             System.out.println("  start.bat / start.sh 已生成");
             checkCompatibility(root, engine);
@@ -92,7 +93,7 @@ public final class Main {
                 cfg.save();
             }
 
-            step("6/6", "启动服务器");
+            bar.step("启动服务器");
             if (opt.setupOnly || !cfg.getBool("auto-run", true)) {
                 printDone(root, engine);
                 return;
@@ -220,11 +221,6 @@ public final class Main {
         System.out.println("   3) 检查 travelmc.properties 里的 neoforge-mirror 是否可用");
         System.out.println();
         System.out.println("  放好后重新运行 java -jar TravelMC-Core.jar 即可，启动脚本会自动重写。");
-    }
-
-    private static void step(String index, String title) {
-        System.out.println();
-        System.out.println("  [" + index + "] " + title);
     }
 
     private static void printHelp() {
