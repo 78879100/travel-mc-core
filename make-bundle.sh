@@ -36,7 +36,7 @@ echo "[2/4] 安装 NeoForge 26.3（官方源失败时自动走 BMCLAPI 镜像补
 "$JAVA_BIN" -jar "$BUNDLE/TravelMC-Core.jar" --dir "$BUNDLE" --install-neoforge --setup-only
 
 echo "[3/4] 下载 Paper 26.3 到 server/"
-python3 - "$BUNDLE" <<'PY'
+python3 - "$BUNDLE" <<'PY_PAPER'
 import hashlib, json, sys, urllib.request
 
 bundle = sys.argv[1]
@@ -59,24 +59,58 @@ if got != want:
     print("[错误] Paper SHA-256 校验失败", file=sys.stderr)
     sys.exit(1)
 print("      校验通过: " + name + " (" + str(round(len(data) / 1048576.0, 1)) + " MB)")
-PY
+PY_PAPER
 
-echo "[4/4] 清理运行痕迹并打包"
-# 安装产物里的 java= 是构建机的绝对路径，改回 java，让用户机器自己找 Java 25
-if [ -f "$BUNDLE/travelmc.properties" ]; then
-  python3 - "$BUNDLE/travelmc.properties" <<'PY'
-import re, sys
-p = sys.argv[1]
-lines = open(p, encoding="utf-8").read().splitlines()
-out = []
-for line in lines:
-    if re.match(r"^\s*java\s*=", line):
-        out.append("java=java")
-    else:
-        out.append(line)
-open(p, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
-PY
-fi
+echo "[4/4] 生成便携启动脚本并打包"
+# 打包后配置里的 java= 和启动脚本里的 java 路径都是构建机的，换机器就失效。
+# 所以包里的 start.bat / start.sh 改成「先跑核心」，由核心去找 Java 25（缺了自动下载）、
+# 认出现成的 NeoForge / Paper，再生成真正带绕对 java 路径的启动脚本并开服。
+python3 - "$BUNDLE" <<'PY_LAUNCHER'
+import os, re, sys
+
+bundle = sys.argv[1]
+
+prop = os.path.join(bundle, "travelmc.properties")
+if os.path.exists(prop):
+    lines = open(prop, encoding="utf-8").read().splitlines()
+    out = []
+    for line in lines:
+        if re.match(r"^\\s*java\\s*=", line):
+            out.append("java=java")
+        else:
+            out.append(line)
+    open(prop, "w", encoding="utf-8", newline="\n").write("\n".join(out) + "\n")
+
+bat = """@echo off
+chcp 65001 >nul
+title Travel MC  Minecraft 26.3
+cd /d "%~dp0"
+where java >nul 2>nul
+if errorlevel 1 (
+  echo.
+  echo   [错误] 这台机器上没有找到 java
+  echo   请安装 Java 25: https://adoptium.net/
+  echo   装好后再双击本脚本，或直接双击 TravelMC-Core.jar
+  echo.
+  pause
+  exit /b 1
+)
+java -jar "TravelMC-Core.jar"
+echo.
+pause
+"""
+sh = """#!/usr/bin/env bash
+set -u
+cd "$(dirname "$0")" || exit 1
+exec java -jar TravelMC-Core.jar
+"""
+
+open(os.path.join(bundle, "start.bat"), "w", encoding="utf-8", newline="\n").write(bat)
+open(os.path.join(bundle, "start.sh"), "w", encoding="utf-8", newline="\n").write(sh)
+os.chmod(os.path.join(bundle, "start.sh"), 0o755)
+print("      已写入便携启动脚本（start.bat / start.sh -> TravelMC-Core.jar）")
+PY_LAUNCHER
+
 rm -rf "$BUNDLE/logs" "$BUNDLE/world" "$BUNDLE/server/neoforge-install.log"
 rm -f "$BUNDLE"/server/*.log "$BUNDLE"/*.log "$BUNDLE"/hs_err_pid*.log
 rm -f "$BUNDLE"/usercache.json "$BUNDLE"/banned-ips.json "$BUNDLE"/banned-players.json \
