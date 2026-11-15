@@ -74,7 +74,7 @@ public final class Scripts {
         args.add("-Dstderr.encoding=UTF-8");
         String extra = cfg.get("extra-jvm-args", "");
         if (!extra.isEmpty()) {
-            for (String token : extra.split("\\s+")) {
+            for (String token : extra.split("\s+")) {
                 if (!token.isEmpty()) {
                     args.add(token);
                 }
@@ -93,7 +93,7 @@ public final class Scripts {
         sb.append("@echo off\n");
         sb.append("chcp 65001 >nul\n");
         sb.append("title Travel MC  Minecraft ").append(Util.MC_VERSION).append("\n");
-        sb.append("color 0B\n");
+        // 不设 color：保持窗口默认配色，避免出现蓝底/蓝字的 cmd 窗口
         sb.append("cd /d \"%~dp0\"\n");
         sb.append("set \"JAVA=").append(javaExe).append("\"\n");
         sb.append("\n");
