@@ -5,7 +5,7 @@
 把 `TravelMC-Core.jar` 丢进一个空文件夹，双击就行。核心会自动补齐 Java 25、自动安装 NeoForge 26.3、自动生成 `start.bat` 并开服；控制台和启动脚本里都会打出巨大的 **TRAVEL MC** 字样。
 
 ```
-████████╗██████╗  █████╗ ██╗   ██╗███████╗██╗
+████████╗██████╗ █████╗ ██╗   ██╗███████╗██╗
 ╚══██╔══╝██╔══██╗██╔══██╗██║   ██║██╔════╝██║
    ██║   ██████╔╝███████║██║   ██║█████╗  ██║
    ██║   ██╔══██╗██╔══██║╚██╗ ██╔╝██╔══╝  ██║
@@ -25,20 +25,32 @@
 | 能力 | 说明 |
 | --- | --- |
 | 自动补 Java | 找不到 Java 25 时自动下载 Temurin 25 到 `runtime/`，不用手动装 |
-| 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-244.jar` |
+| 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar` |
 | 单窗口运行 | 服务器直接在核心所在的那个窗口里启动，不会再弹出第二个 cmd 窗口，也没有蓝底配色 |
 | 自动装 NeoForge | 首次运行自动下载 NeoForge 26.3 安装器，依赖走国内镜像补齐，装完即可用 |
-| 自動生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`，内含巨幅 TRAVEL MC 横幅 |
+| 自带两个核心 | Release 提供 `TravelMC-Core-Full.zip`，包内直接带 NeoForge 26.3 依赖库 + Paper 26.3 服务端 jar，解压双击就能开服 |
+| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`，内含巨幅 TRAVEL MC 横幅 |
 | 自动开服 | 准备完直接拉起服务器，崩服后 5 秒自动重启 |
 | 模组 + 插件 | 原生 NeoForge 跑模组；`server/` 放入 Youer 之类混合核心即同时跑插件；纯插件可切 Paper |
 | 自带优化参数 | 默认 Aikar GC 参数 + UTF-8 控制台，4G 内存起步即可开服 |
 
 ## 快速开始
 
-1. 下载 [`TravelMC-Core.jar`](https://github.com/78879100/travel-mc-core/releases/latest)
+**方式 A：完整包（推荐，不用再下核心）**
+
+1. 下载 `TravelMC-Core-Full.zip`（Release 最新版，约 186 MB）
+2. 解压到任意文件夹 —— 里面**已经有 NeoForge 26.3 的依赖库**（`libraries/`）**和 Paper 26.3 的 `server/paper-26.3-252.jar`**
+3. 双击 `start.bat`（Linux / macOS 执行 `bash start.sh`）直接开服，不再联网下载核心
+4. 想跑纯插件模式：把 `travelmc.properties` 里的 `engine` 改成 `paper`
+
+**方式 B：单文件 jar（只有 48 KB，首次联网自装）**
+
+1. 下载 `TravelMC-Core.jar`
 2. 放进一个空文件夹，双击（或执行 `java -jar TravelMC-Core.jar`）
-3. 等它跑完 —— 第一次大约要下一个 100MB 左右的服务端依赖
+3. 等它跑完 —— 第一次大约要下一个 100MB 左右的服务端依赖（有动态进度条）
 4. 之后每次开服，双击 `start.bat` 就行
+
+下载页俱：[github.com/78879100/travel-mc-core/releases](https://github.com/78879100/travel-mc-core/releases/latest)
 
 核心自身兼容 Java 8+，但 **Minecraft 26.3 的服务端必须用 Java 25**；没装也没关系，核心会自动下载。
 
@@ -83,8 +95,8 @@ TRAVEL MC 横幅
 
 | 引擎 | 插件（Bukkit/Paper） | 模组（NeoForge） | 怎么来 |
 | --- | --- | --- | --- |
-| **NeoForge 26.3**（默认） | ❌ | ✅ | 核心自动下载安装 |
-| Paper 26.3 | ✅ | ❌ | `engine=paper` 或把 jar 放进 `server/` |
+| **NeoForge 26.3**（默认） | ❌ | ✅ | 核心自动下载安装（完整包已内置） |
+| Paper 26.3 | ✅ | ❌ | `engine=paper`，或直接用完整包里的 `server/paper-26.3-252.jar` |
 | **Youer 26.3**（NeoForge + Paper 混合） | ✅ | ✅ | 自行取得 jar，放进 `server/` 自动接管 |
 
 **想让插件和模组同时生效**：把混合核心（Youer）的 server jar 放进 `server/`，再运行一次核心。核心会认出它、重写启动脚本，`mods/` 和 `plugins/` 同时生效，横幅里的引擎名也会变。
@@ -139,12 +151,16 @@ git clone https://github.com/78879100/travel-mc-core.git
 cd travel-mc-core
 JAVA_HOME=/path/to/jdk25 ./build.sh
 # 产物：dist/TravelMC-Core.jar
+
+# 想连自带核心的完整包一起打：
+JAVA_HOME=/path/to/jdk25 ./make-bundle.sh
+# 产物：dist/TravelMC-Core-Full.zip
 ```
 
-推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar 挂到 Release：
+推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar 和完整包 zip 一起挂到 Release：
 
 ```bash
-git tag v1.0.3 && git push origin v1.0.3
+git tag v1.0.4 && git push origin v1.0.4
 ```
 
 源码结构：
@@ -168,6 +184,7 @@ src/main/java/mc/travel/core/
 安装器直连 `maven.neoforged.net` 在国内经常超时。核心会解析安装器日志，把缺的依赖从 `bmclapi` 镜像补进 `libraries/` 再重跑安装器，最多三轮。仍然失败时：
 
 - 检查 `neoforge-mirror` 是否可用（默认 `https://bmclapi2.bangbang93.com/maven`）
+- 或直接用 `TravelMC-Core-Full.zip`，里面已经把 NeoForge 装好了
 - 或在有网络代理的机器上装好，把整个文件夹拷过来
 
 **下载时进度条一直在刷？**
@@ -175,6 +192,9 @@ src/main/java/mc/travel/core/
 
 **会弹出好几个窗口吗？**
 不会。运行核心后服务器直接在同一个窗口里跑（不会再另开 cmd），窗口也是系统默认配色，不再是蓝底蓝字；关闭这个窗口就停服。
+
+**完整包能不能离线开？**
+NeoForge 模式可以 —— 依赖库和核心都在包里，解压就能开（Java 25 本机没有的话仍会自动下一次）。Paper 模式第一次启动时 Paper 会自己拉一个 Mojang 原版 jar 做底子，这是 Paper 自身行为。
 
 **端口能连上吗？**
 默认 25565，记得在系统防火墙 / 云服务器安全组放行。
@@ -186,7 +206,7 @@ src/main/java/mc/travel/core/
 4G 能开服带几个模组；几十个模组建议 6–8G。别超过物理内存的 70%。
 
 **想换回纯插件服？**
-把 `engine=paper`，核心会下载 Paper 26.3（SHA-256 校验）并以插件模式启动。
+把 `engine=paper`，核心会下载 Paper 26.3（SHA-256 校验）并以插件模式启动；完整包里已经带好了 Paper jar。
 
 ## 许可证与致谢
 
