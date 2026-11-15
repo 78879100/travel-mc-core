@@ -74,7 +74,7 @@ public final class Scripts {
         args.add("-Dstderr.encoding=UTF-8");
         String extra = cfg.get("extra-jvm-args", "");
         if (!extra.isEmpty()) {
-            for (String token : extra.split("\s+")) {
+            for (String token : extra.trim().split(" ")) {
                 if (!token.isEmpty()) {
                     args.add(token);
                 }
