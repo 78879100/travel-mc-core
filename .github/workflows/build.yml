@@ -22,12 +22,17 @@ jobs:
           distribution: temurin
           java-version: '25'
 
-      - name: Build TravelMC-Core.jar
+      - name: Build TravelAI plugin（AI 聊天插件）
+        run: |
+          chmod +x plugin/build.sh
+          ./plugin/build.sh
+
+      - name: Build TravelMC-Core.jar（内嵌 TravelAI 插件）
         run: |
           chmod +x build.sh
           ./build.sh
 
-      - name: Build TravelMC-Core-Full.zip（内置 NeoForge + Paper 核心）
+      - name: Build TravelMC-Core-Full.zip（内置 NeoForge + Paper 核心 + TravelAI）
         run: |
           chmod +x make-bundle.sh
           ./make-bundle.sh
@@ -39,38 +44,47 @@ jobs:
           path: |
             dist/TravelMC-Core.jar
             dist/TravelMC-Core-Full.zip
+            plugin/dist/TravelAI.jar
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.0.5
-          name: Travel MC Core v1.0.5
+          tag_name: v1.1.0
+          name: Travel MC Core v1.1.0（内置 AI 助手）
           body: |
-            Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）
+            Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）+ 内置 AI 聊天助手。
 
-            **v1.0.5 修复：**
+            **三种下载：**
 
-            - 修复 `start.bat` 大字横幅在中文 Windows 报 `'��║' is not recognized ...`：
-              横幅不再 `echo` 逐行写进批处理，改为核心生成 `banner.txt`，`start.bat` 用 `type` 原样输出
-            - 启动准备流程（6 步）也换成进度条：`[###############-------]  66.7%  [4/6] 准备服务端核心`
+            1. `TravelMC-Core-Full.zip`（推荐，约 186 MB）——**包内直接就有两个核心和 AI 插件**：
+               - NeoForge 26.3.0.101 完整服务端依赖（`libraries/`、`unix_args.txt`、`win_args.txt`）
+               - Paper 26.3 的 `server/paper-26.3-253.jar`（Bukkit 插件核心）
+               - `plugins/TravelAI.jar`（AI 助手，已放好）
+               - 解压后双击 `start.bat`（Linux/macOS 用 `start.sh`）直接开服
+            2. `TravelMC-Core.jar`（约 80 KB）——只有一个 jar，首次运行自己联网装核心，并自动把 AI 插件释放到 `plugins/`
+            3. `TravelAI.jar`（约 33 KB）——单独的 AI 插件，已经自己搭好 Paper/Youer 的可以只拿这个
 
-            **两种下载，按需选一个：**
+            **v1.1.0 新增：AI 助手（Travel AI）**
 
-            1. `TravelMC-Core-Full.zip`（推荐，约 186 MB）——**包内直接就有两个核心**：
-               - NeoForge 26.3.0.101 的完整服务端依赖（`libraries/`、`unix_args.txt`、`win_args.txt`）
-               - Paper 26.3 的 `server/paper-26.3-252.jar`（Bukkit 插件核心）
-               - 解压后双击 `start.bat`（Linux/macOS 用 `start.sh`）直接开服，不用再下载任何核心
-               - 想切纯插件模式：把 `travelmc.properties` 的 `engine` 改成 `paper`
-            2. `TravelMC-Core.jar`（48 KB）——只有一个 jar，首次运行自己联网下载并安装两个核心
+            - 玩家聊天框输入 `/AI <问题>` 直接问 AI，支持 **DeepSeek / Kimi / 豆包 / GPT** 四家
+            - 后台（控制台）输入 `/ai deepseek`（或 `kimi` / `doubao` / `gpt`）就安装对应服务商的 API 模块
+            - API Key 服主自己填：`/ai key <名字> <Key>`；游戏内 OP 输 `/ai key <名字>` 后在聊天框粘贴，
+              回显只有掩码 `sk-t****3456（长度 20）`，不写进日志
+            - `/ai list` 看已装哪些服务商、Key 是否填好；`/ai model`、`/ai use`、`/ai base` 可改模型/默认/接口地址
+            - 权限：所有玩家都能提问；**只有 OP 能让 AI 代执行服务器指令**，且必须先 `/ai yes` 确认，
+              并只放行 `say/tp/give/time/weather/gamemode` 等常用指令，`op/stop/reload/execute` 这类一律拦截
 
-            通用特性：
+            > AI 是 Bukkit 插件，需要 `engine=paper` 或用 Youer 混合端；原生 NeoForge 模式不加载 Bukkit 插件，
+             > 核心启动时会直接提示这一点。
 
-            - 双击 jar：自动补 Java 25 -> 自动装 NeoForge 26.3 -> 自动生成 start.bat -> 自动开服
-            - 下载是动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar`
-            - 全程只开一个窗口：服务器直接在当前窗口运行，不另开 cmd 窗口，也没有蓝底配色
-            - 安装器依赖走国内镜像补齐，网络受限也能装上
-            - mods/ 放模组直接生效；plugins/ 放插件（`engine=paper` 时全量支持）
+            **前几版已有：**
+
+            - 双击 jar 自动补 Java 25 → 装 NeoForge 26.3 → 生成 start.bat → 自动开服
+            - 下载改动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar`
+            - 启动准备 6 步也是进度条；大字横幅走 `banner.txt`，中文 Windows 不再乱码
+            - 全程只开一个 cmd 窗口，无蓝底配色
           files: |
             dist/TravelMC-Core.jar
             dist/TravelMC-Core-Full.zip
+            plugin/dist/TravelAI.jar
           make_latest: true
