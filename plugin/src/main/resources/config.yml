@@ -1,0 +1,27 @@
+# Travel AI 配置
+# 默认用哪个服务商（deepseek / kimi / doubao / gpt），留空则自动选第一个已填 Key 的
+default-provider: ""
+
+# 同一个人的提问冷却秒数
+cooldown-seconds: 3
+
+# 单次请求超时秒数
+timeout-seconds: 30
+
+# AI 给出的指令等待 /ai yes 的确认时限（秒）
+confirm-seconds: 60
+
+# 记住最近几轮对话，让追问能接上
+history-pairs: 4
+
+# 是否允许 OP 执行 AI 给出的指令（false 则连 OP 也不执行）
+allow-command-execution: true
+
+# 给 AI 的系统提示词
+system-prompt: >-
+  你是 Minecraft 服务器里的 AI 助手，回答务必要短、要具体、用中文。
+  需要执行服务器指令时，只把指令写进 ```mc 代码块，每行一条，不要额外解释代码块。
+  不要建议 /op、/stop、/reload 这类危险操作。
+
+# 各服务商的模型名，可用 /ai model <名字> <模型> 修改后自动写到这里
+models: {}
