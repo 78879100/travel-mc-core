@@ -30,6 +30,14 @@ find "$ROOT/src/main/java" -name '*.java' > "$ROOT/build/sources.txt"
 
 echo "[3/3] 拷贝资源并打包"
 cp -R "$ROOT/src/main/resources/." "$OUT/"
+# 内嵌 Travel AI 插件：核心首次运行会自动把它释放到 plugins/TravelAI.jar
+if [ -f "$ROOT/plugin/dist/TravelAI.jar" ]; then
+  mkdir -p "$OUT/plugins"
+  cp "$ROOT/plugin/dist/TravelAI.jar" "$OUT/plugins/TravelAI.jar"
+  echo "      已内嵌 TravelAI.jar ($(wc -c < "$ROOT/plugin/dist/TravelAI.jar") 字节)"
+else
+  echo "      [提示] 没有 plugin/dist/TravelAI.jar，先跑 plugin/build.sh 才能把 AI 插件打进核心"
+fi
 "$JAR" cfe "$DIST/TravelMC-Core.jar" mc.travel.core.Main -C "$OUT" .
 
 echo
