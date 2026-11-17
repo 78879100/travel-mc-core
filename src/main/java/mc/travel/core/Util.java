@@ -20,7 +20,7 @@ import java.util.Locale;
 public final class Util {
 
     public static final String CORE_NAME = "Travel MC Core";
-    public static final String CORE_VERSION = "1.0.5";
+    public static final String CORE_VERSION = "1.1.0";
     public static final String MC_VERSION = "26.3";
     /** 26.3 服务端要求 Java 25 及以上。 */
     public static final int MIN_JAVA = 25;
@@ -40,6 +40,7 @@ public final class Util {
         private final String label;
         private long lastPaint;
         private int lastLength;
+        private long lastDone;
 
         public ProgressBar(String label) {
             this.label = label == null ? "" : label;
@@ -61,8 +62,6 @@ public final class Util {
             paint(total > 0 ? total : lastDone, total);
             System.out.println();
         }
-
-        private long lastDone;
 
         private void paint(long done, long total) {
             lastDone = done;
