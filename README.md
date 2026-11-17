@@ -2,10 +2,10 @@
 
 **Minecraft Java 版 26.3 服务端核心 ｜ 模组用 NeoForge，插件用 Bukkit/Paper，一个 jar 全管**
 
-把 `TravelMC-Core.jar` 丢进一个空文件夹，双击就行。核心会自动补齐 Java 25、自动安装 NeoForge 26.3、自动生成 `start.bat` 并开服；控制台和启动脚本里都会打出巨大的 **TRAVEL MC** 字样。
+把 `TravelMC-Core.jar` 丢进一个空文件夹，双击就行。核心会自动补齐 Java 25、自动安装 NeoForge 26.3、自动生成 `start.bat` 并开服；控制台和启动脚本里都会打出巨大的 **TRAVEL MC** 字样；`plugins/` 里还会自动放好 AI 插件，玩家直接 `/AI 问题` 就能问 AI。
 
 ```
-████████╗██████╗ █████╗ ██╗   ██╗███████╗██╗
+████████╗██████╗  █████╗ ██╗   ██╗███████╗██╗
 ╚══██╔══╝██╔══██╗██╔══██╗██║   ██║██╔════╝██║
    ██║   ██████╔╝███████║██║   ██║█████╗  ██║
    ██║   ██╔══██╗██╔══██║╚██╗ ██╔╝██╔══╝  ██║
@@ -26,38 +26,35 @@
 | --- | --- |
 | 自动补 Java | 找不到 Java 25 时自动下载 Temurin 25 到 `runtime/`，不用手动装 |
 | 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar` |
-| 启动进度条 | 准备启动的 6 个步骤也走进度条：`[###############-------]  66.7%  [4/6] 准备服务端核心` |
 | 单窗口运行 | 服务器直接在核心所在的那个窗口里启动，不会再弹出第二个 cmd 窗口，也没有蓝底配色 |
 | 自动装 NeoForge | 首次运行自动下载 NeoForge 26.3 安装器，依赖走国内镜像补齐，装完即可用 |
 | 自带两个核心 | Release 提供 `TravelMC-Core-Full.zip`，包内直接带 NeoForge 26.3 依赖库 + Paper 26.3 服务端 jar，解压双击就能开服 |
-| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`；巨幅 TRAVEL MC 横幅由 UTF-8 的 `banner.txt` 承载，`start.bat` 用 `type` 输出，中文 Windows 不乱码 |
+| 启动进度条 | 准备启动的 6 个步骤也走进度条：`[###############-------]  66.7%  [4/6] 准备服务端核心` |
+| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`；巨幅 TRAVEL MC 横幅由 `banner.txt` 承载，`start.bat` 用 `type` 输出，中文 Windows 不乱码 |
 | 自动开服 | 准备完直接拉起服务器，崩服后 5 秒自动重启 |
 | 模组 + 插件 | 原生 NeoForge 跑模组；`server/` 放入 Youer 之类混合核心即同时跑插件；纯插件可切 Paper |
 | 自带优化参数 | 默认 Aikar GC 参数 + UTF-8 控制台，4G 内存起步即可开服 |
+| 内置 AI 助手 | 玩家聊天框 `/AI <问题>` 直接问 AI，支持 DeepSeek / Kimi / 豆包 / GPT；后台 `/ai <名字>` 装服务商、`/ai key` 填 Key（回显打星号） |
 
 ## 快速开始
 
-**方式 A：完整包（推荐，不用再下核心）**
+**方式 A：完整包（推荐，离线可用）**
 
-1. 下载 `TravelMC-Core-Full.zip`（Release 最新版，约 186 MB）
-2. 解压到任意文件夹 —— 里面**已经有 NeoForge 26.3 的依赖库**（`libraries/`）**和 Paper 26.3 的 `server/paper-26.3-252.jar`**
+1. 下载 [`TravelMC-Core-Full.zip`](https://github.com/78879100/travel-mc-core/releases/latest)（约 186 MB）
+2. 解压到任意文件夹 —— 里面**已经有 NeoForge 26.3 的依赖库**（`libraries/`）**和 Paper 26.3 的核心**（`server/`），`plugins/` 里也已经有 `TravelAI.jar`
 3. 双击 `start.bat`（Linux / macOS 执行 `bash start.sh`）直接开服，不再联网下载核心
-4. 想跑纯插件模式：把 `travelmc.properties` 里的 `engine` 改成 `paper`
+4. 想跑 AI / 纯插件模式：把 `travelmc.properties` 里的 `engine` 改成 `paper`
 
-**方式 B：单文件 jar（只有 48 KB，首次联网自装）**
+**方式 B：单文件 jar（体积小，首次联网自装）**
 
-1. 下载 `TravelMC-Core.jar`
+1. 下载 [`TravelMC-Core.jar`](https://github.com/78879100/travel-mc-core/releases/latest)
 2. 放进一个空文件夹，双击（或执行 `java -jar TravelMC-Core.jar`）
-3. 等它跑完 —— 第一次大约要下一个 100MB 左右的服务端依赖（有动态进度条）
+3. 等它跑完 —— 第一次大约要下一个 100MB 左右的服务端依赖
 4. 之后每次开服，双击 `start.bat` 就行
-
-下载页俱：[github.com/78879100/travel-mc-core/releases](https://github.com/78879100/travel-mc-core/releases/latest)
 
 核心自身兼容 Java 8+，但 **Minecraft 26.3 的服务端必须用 Java 25**；没装也没关系，核心会自动下载。
 
 ### 首次运行会做什么
-
-准备过程是进度条形态，一行一个步骤：
 
 ```
 巨幅 TRAVEL MC 横幅（来自 banner.txt）
@@ -70,7 +67,7 @@
   [##########################] 100.0%  [6/6] 启动服务器
 ```
 
-每个步骤下面会接着打印细节（识别到的系统与 Java、目录清单、引擎版本、模组/插件数量）；第 4 步里下载核心时再叠一层带文件名的下载进度条。
+每一步下面照样打印细节（识别到的系统与 Java、目录清单、引擎版本、模组/插件数量）。第 2 步还会把内置的 `TravelAI.jar` 释放到 `plugins/`。
 
 ## 目录结构
 
@@ -80,13 +77,12 @@
 你的文件夹/
 ├── TravelMC-Core.jar       核心（只剩它也能重新生成一切）
 ├── start.bat               Windows 启动脚本（自动生成）
-├── banner.txt              巨幅 TRAVEL MC 横幅（UTF-8，start.bat 用 type 输出）
 ├── start.sh                Linux / macOS 启动脚本（自动生成）
 ├── travelmc.properties     核心配置
 ├── server.properties       服务器配置（MOTD 已预设 Travel MC）
 ├── eula.txt                EULA（首次运行自动写 true）
 ├── mods/                   NeoForge 模组，丢进去自动加载
-├── plugins/                Bukkit/Paper 插件（需要混合核心或 Paper）
+├── plugins/                Bukkit/Paper 插件（首次运行自动放好 TravelAI.jar）
 ├── config/                 模组/插件配置
 ├── world/                  地图存档
 ├── logs/                   日志
@@ -96,14 +92,42 @@
 └── runtime/                自动下载的 Java 25
 ```
 
+## AI 助手（Travel AI）
+
+核心会把 `TravelAI.jar` 自动释放到 `plugins/TravelAI.jar`，玩家在聊天框就能问 AI：
+
+```
+/AI 这附近有什么矿
+/AI 帮我写个欢迎公告
+```
+
+服主（控制台，或游戏内 OP）先装服务商、再填 Key：
+
+```
+/ai deepseek                        # 安装 DeepSeek 模块（也可 kimi / doubao / gpt）
+/ai key deepseek sk-xxxxxxxx        # 控制台直接填
+/ai key deepseek                    # 游戏内 OP：输完这句，下一条聊天粘贴 Key，回显只有 sk-t****3456（长度 20）
+/ai list                            # 看已装什么、Key 填好没
+/ai model deepseek deepseek-chat    # 换模型（火山方舟填 endpoint id）
+/ai use deepseek                    # 设为默认服务商
+/ai base deepseek https://...       # 换接口地址（自建代理）
+/ai yes | /ai no                    # 执行 / 放弃 AI 给出的指令
+```
+
+- 所有玩家都能提问；**只有 OP 能让 AI 代执行服务器指令**
+- AI 给出的指令会先列出来，OP 输入 `/ai yes` 才真正执行，`/ai no` 放弃
+- 只放行 `say / tp / give / time / weather / gamemode / effect / summon` 等常用指令；`op / deop / stop / reload / execute / whitelist` 一律拦截
+- Key 存在 `plugins/TravelAI/keys.properties`，只以掩码形式显示，不写进聊天和日志
+- AI 是 Bukkit 插件：需要 `engine=paper` 或 Youer 混合端；原生 NeoForge 模式不加载 Bukkit 插件，核心启动时会直接提示
+
 ## 插件 + 模组
 
 26.3 目前的服务端生态分三档，本核心都管：
 
 | 引擎 | 插件（Bukkit/Paper） | 模组（NeoForge） | 怎么来 |
 | --- | --- | --- | --- |
-| **NeoForge 26.3**（默认） | ❌ | ✅ | 核心自动下载安装（完整包已内置） |
-| Paper 26.3 | ✅ | ❌ | `engine=paper`，或直接用完整包里的 `server/paper-26.3-252.jar` |
+| **NeoForge 26.3**（默认） | ❌ | ✅ | 核心自动下载安装 |
+| Paper 26.3 | ✅ | ❌ | `engine=paper` 或把 jar 放进 `server/` |
 | **Youer 26.3**（NeoForge + Paper 混合） | ✅ | ✅ | 自行取得 jar，放进 `server/` 自动接管 |
 
 **想让插件和模组同时生效**：把混合核心（Youer）的 server jar 放进 `server/`，再运行一次核心。核心会认出它、重写启动脚本，`mods/` 和 `plugins/` 同时生效，横幅里的引擎名也会变。
@@ -156,33 +180,48 @@ java -jar TravelMC-Core.jar [参数]
 ```bash
 git clone https://github.com/78879100/travel-mc-core.git
 cd travel-mc-core
-JAVA_HOME=/path/to/jdk25 ./build.sh
-# 产物：dist/TravelMC-Core.jar
 
-# 想连自带核心的完整包一起打：
+# 1) 先编 AI 插件（核心会把它内嵌进 jar）
+JAVA_HOME=/path/to/jdk25 ./plugin/build.sh
+# 产物：plugin/dist/TravelAI.jar
+
+# 2) 再编核心
+JAVA_HOME=/path/to/jdk25 ./build.sh
+# 产物：dist/TravelMC-Core.jar（内含 plugins/TravelAI.jar）
+
+# 3) 想生成完整包（NeoForge 依赖 + Paper 核心 + AI 插件）
 JAVA_HOME=/path/to/jdk25 ./make-bundle.sh
-# 产物：dist/TravelMC-Core-Full.zip
 ```
 
-推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar 和完整包 zip 一起挂到 Release：
+`plugin/build.sh` 会自动从 `repo.papermc.io` 拉 `paper-api` 编译依赖，也可以 `PAPER_API=/path/to/paper-api.jar` 指定本地 jar。
+
+推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar、完整包、TravelAI.jar 一起挂到 Release：
 
 ```bash
-git tag v1.0.5 && git push origin v1.0.5
+git tag v1.1.0 && git push origin v1.1.0
 ```
 
 源码结构：
 
 ```
 src/main/java/mc/travel/core/
-├── Main.java              入口、参数解析、6 步进度条流程编排（Windows 在本窗口运行 start.bat）
-├── Banner.java            巨幅 TRAVEL MC 横幅
-├── Config.java            travelmc.properties 读写
-├── Setup.java             目录、eula、server.properties、使用说明
-├── JavaEnv.java           Java 25 定位 / 自动下载 / 解压
-├── Engine.java            引擎识别、NeoForge 产物定位、版本比较
-├── EngineInstaller.java   安装器下载与运行、镜像补依赖、Paper 下载
-├── Scripts.java           start.bat / start.sh / banner.txt 生成
-└── Util.java              下载、进度条、启动步骤进度条、校验、编码等工具
+├── Main.java            入口、参数解析、6 步流程编排
+├── Banner.java          巨幅 TRAVEL MC 横幅
+├── Config.java          travelmc.properties 读写
+├── Setup.java           目录、eula、server.properties、使用说明、释放 AI 插件
+├── JavaEnv.java         Java 25 定位 / 自动下载 / 解压
+├── Engine.java          引擎识别、NeoForge 产物定位、版本比较
+├── EngineInstaller.java 安装器下载与运行、镜像补依赖、Paper 下载
+├── Scripts.java         start.bat / start.sh 生成
+└── Util.java            下载、进度条、校验、编码等工具
+
+plugin/src/main/java/mc/travel/ai/
+├── TravelAI.java        插件主类：/ai 子命令、聊天拦截填 Key、异步调 AI
+├── Json.java            零依赖 JSON 解析/生成
+├── Http.java            纯 JDK HTTP 调用（聊天补全）
+├── Modules.java         服务商模块安装（内置 modules/<id>.jar）
+├── KeyStore.java        API Key 存储与掩码
+└── Guard.java           指令白名单 + 从回答里抽 ```mc 代码块
 ```
 
 ## 常见问题
@@ -191,32 +230,28 @@ src/main/java/mc/travel/core/
 安装器直连 `maven.neoforged.net` 在国内经常超时。核心会解析安装器日志，把缺的依赖从 `bmclapi` 镜像补进 `libraries/` 再重跑安装器，最多三轮。仍然失败时：
 
 - 检查 `neoforge-mirror` 是否可用（默认 `https://bmclapi2.bangbang93.com/maven`）
-- 或直接用 `TravelMC-Core-Full.zip`，里面已经把 NeoForge 装好了
 - 或在有网络代理的机器上装好，把整个文件夹拷过来
 
 **下载时进度条一直在刷？**
 进度条用 `\r` 原地重绘，最快 12 帧每秒，不会刷屏；下载完成后会换行，后面的日志不会和它糊在一起。如果终端不支持回车覆盖（少数旧 cmd），会看到多行进度，不影响下载结果。
 
-**会弹出好几个窗口吗？**
-不会。运行核心后服务器直接在同一个窗口里跑（不会再另开 cmd），窗口也是系统默认配色，不再是蓝底蓝字；关闭这个窗口就停服。
-
-**`start.bat` 报 `'��║' is not recognized as an internal or external command`？**
-这是 v1.0.4 及更早版本的 BUG，v1.0.5 已修复：横幅不再 `echo` 进 `.bat`（中文 Windows 用 GBK 解析 UTF-8 批处理会吞字节），改为 `banner.txt` + `type` 原样输出。升级 jar 后重新运行一次核心，`start.bat` 和 `banner.txt` 会自动重写。
-
-**控制台方块字是乱码？**
-启动脚本已自动 `chcp 65001`。若还是不清晰，换 Windows Terminal 或等宽字体（Cascadia Mono / Consolas）。
-
-**完整包能不能离线开？**
-NeoForge 模式可以 —— 依赖库和核心都在包里，解压就能开（Java 25 本机没有的话仍会自动下一次）。Paper 模式第一次启动时 Paper 会自己拉一个 Mojang 原版 jar 做底子，这是 Paper 自身行为。
-
 **端口能连上吗？**
 默认 25565，记得在系统防火墙 / 云服务器安全组放行。
+
+**控制台方块字是乱码？**
+启动脚本已经设了 `chcp 65001`。如果用的终端本身字体缺方块字符，换成 Windows Terminal 或等宽字体（如 Cascadia Mono / Consolas）。
+
+**`start.bat` 报 `'��║' is not recognized as an internal or external command`？**
+这是 v1.0.4 及更早版本的 BUG，v1.0.5 已修：横幅不再 `echo` 进 `.bat`，改为 `banner.txt` + `type`。升级 jar 后重新运行一次核心，`start.bat` 与 `banner.txt` 会自动重写。
+
+**`/AI` 提示“还没装 AI 服务商”？**
+先在后台执行 `/ai deepseek`（或 `kimi` / `doubao` / `gpt`）安装模块，再 `/ai key <名字> <你的Key>`。另外 AI 插件只在 `engine=paper` 或 Youer 混合端生效，NeoForge 原生模式加载不了 Bukkit 插件。
 
 **内存给多少？**
 4G 能开服带几个模组；几十个模组建议 6–8G。别超过物理内存的 70%。
 
 **想换回纯插件服？**
-把 `engine=paper`，核心会下载 Paper 26.3（SHA-256 校验）并以插件模式启动；完整包里已经带好了 Paper jar。
+把 `engine=paper`，核心会下载 Paper 26.3（SHA-256 校验）并以插件模式启动。
 
 ## 许可证与致谢
 
