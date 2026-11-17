@@ -1,0 +1,22 @@
+name: TravelAI
+version: 1.0.0
+main: mc.travel.ai.TravelAI
+api-version: '1.21'
+description: Travel MC 的 AI 聊天助手（/AI 问题 直接问，后台 /ai 名字 装服务商）
+author: Travel MC
+website: https://github.com/78879100/travel-mc-core
+commands:
+  ai:
+    description: 问 AI / 安装服务商模块 / 填 API Key / 执行 AI 给出的指令
+    usage: /AI <问题> | /ai list | /ai install <名字> | /ai key <名字>
+    permission: travelai.use
+permissions:
+  travelai.use:
+    description: 允许用 /AI 提问
+    default: true
+  travelai.admin:
+    description: 允许安装模块、填 Key、改模型
+    default: op
+  travelai.exec:
+    description: 允许执行 AI 给出的服务器指令（OP）
+    default: op

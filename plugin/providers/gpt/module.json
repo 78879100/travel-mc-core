@@ -1,0 +1,7 @@
+{
+  "id": "gpt",
+  "display": "GPT（OpenAI）",
+  "baseUrl": "https://api.openai.com/v1/chat/completions",
+  "model": "gpt-4o-mini",
+  "keyPage": "https://platform.openai.com/api-keys"
+}
