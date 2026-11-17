@@ -1,6 +1,7 @@
 package mc.travel.core;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -25,6 +26,34 @@ public final class Setup {
         for (String dir : dirs) {
             Files.createDirectories(root.resolve(dir));
         }
+    }
+
+    /**
+     * 把核心内嵌的 Travel AI 插件释放到 plugins/：玩家就能在聊天框用 /AI 问题。
+     * 目标文件已存在时不动，方便服主自己升级插件版本。
+     */
+    public static boolean ensureAiPlugin(Path root) throws IOException {
+        Path target = root.resolve("plugins").resolve("TravelAI.jar");
+        if (Files.exists(target)) {
+            return false;
+        }
+        java.io.InputStream in = Setup.class.getClassLoader().getResourceAsStream("plugins/TravelAI.jar");
+        if (in == null) {
+            return false;
+        }
+        try {
+            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+            byte[] chunk = new byte[8192];
+            int n;
+            while ((n = in.read(chunk)) > 0) {
+                buf.write(chunk, 0, n);
+            }
+            Files.createDirectories(target.getParent());
+            Files.write(target, buf.toByteArray());
+        } finally {
+            in.close();
+        }
+        return true;
     }
 
     public static boolean ensureEula(Path root) throws IOException {
@@ -99,13 +128,23 @@ public final class Setup {
                 + "四、配置\n"
                 + "  修改 travelmc.properties 后重新运行核心即可，启动脚本会自动重写。\n"
                 + "  国内网络下载不动时，可改 neoforge-mirror（填 none 表示走官方源）。\n\n"
-                + "五、常用命令\n"
+                + "五、AI 助手（Travel AI）\n"
+                + "  plugins/TravelAI.jar 已自动放好，玩家在聊天框输入：\n"
+                + "    /AI 问题内容                     直接问 AI\n"
+                + "  服主在服务器后台（控制台）输入：\n"
+                + "    /ai deepseek                    安装 DeepSeek 模块（也支持 kimi / doubao / gpt）\n"
+                + "    /ai key deepseek <你的Key>      填 API Key（游戏内 OP 输 /ai key deepseek 后在下一条聊天粘贴，显示为 ****）\n"
+                + "    /ai list                        看已装哪些服务商、Key 是否填好\n"
+                + "  权限：所有玩家都能提问；只有 OP 能让 AI 代执行服务器指令，\n"
+                + "        并且要先输入 /ai yes 确认，只放行 say/tp/give/time/weather 等常用指令。\n"
+                + "  AI 插件是 Bukkit 插件，需要 engine=paper 或 Youer 混合端才会加载。\n\n"
+                + "六、常用命令\n"
                 + "  java -jar TravelMC-Core.jar --setup-only        只生成脚本，不启动服务器\n"
                 + "  java -jar TravelMC-Core.jar --engine paper      纯插件模式（Paper " + Util.MC_VERSION + "）\n"
                 + "  java -jar TravelMC-Core.jar --install-neoforge  强制重装 NeoForge 核心\n"
                 + "  java -jar TravelMC-Core.jar --memory 8G         改内存\n"
                 + "  java -jar TravelMC-Core.jar --help              查看全部参数\n\n"
-                + "六、注意事项\n"
+                + "七、注意事项\n"
                 + "  - Minecraft " + Util.MC_VERSION + " 服务端必须用 Java " + Util.MIN_JAVA + "，低版本会直接启动失败；\n"
                 + "  - 首次启动已写入 eula=true，表示你同意 https://aka.ms/MinecraftEULA；\n"
                 + "  - 端口默认 25565，开服前记得在防火墙/安全组放行。\n";
