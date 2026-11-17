@@ -51,7 +51,11 @@ public final class Main {
             Setup.ensureEula(root);
             Setup.ensureServerProperties(root, cfg);
             Setup.ensureGuide(root);
+            boolean aiPlugin = Setup.ensureAiPlugin(root);
             System.out.println("  server / mods / plugins / config / world / logs / backups 已就绪");
+            if (aiPlugin) {
+                System.out.println("  Travel AI 插件已释放到 plugins/TravelAI.jar（聊天框 /AI 问题 直接问）");
+            }
             System.out.println("  已写入 eula=true（继续使用即表示同意 Minecraft EULA）");
 
             bar.step("准备 Java " + Util.MIN_JAVA + " 运行时");
@@ -146,6 +150,7 @@ public final class Main {
     private static void checkCompatibility(Path root, Engine.Resolved engine) {
         int mods = Setup.countJars(root.resolve("mods"));
         int plugins = Setup.countJars(root.resolve("plugins"));
+        boolean hasAi = Files.exists(root.resolve("plugins").resolve("TravelAI.jar"));
         if (engine.isHybrid()) {
             System.out.println("  混合核心：可同时加载 " + mods + " 个模组与 " + plugins + " 个插件");
             return;
@@ -155,12 +160,19 @@ public final class Main {
             if (plugins > 0) {
                 System.out.println("  [提示] 原生 NeoForge 不加载 Bukkit 插件，plugins/ 里的 " + plugins
                         + " 个插件暂不生效");
+                if (hasAi) {
+                    System.out.println("         包括 Travel AI：想用 /AI 功能，把 travelmc.properties 的 engine 改成 paper");
+                    System.out.println("         或把 Youer 混合核心放进 server/（插件和模组就能一起跑）");
+                }
                 System.out.println("         需要插件和模组同时生效，把 Youer 混合核心放进 server/ 即可自动接管");
             }
             return;
         }
         if (engine.isPaper()) {
             System.out.println("  插件模式：plugins/ 里 " + plugins + " 个插件会被加载");
+            if (hasAi) {
+                System.out.println("  AI 助手：聊天框 /AI <问题> 直接问；后台 /ai deepseek|kimi|doubao|gpt 装服务商，再 /ai key 填 Key");
+            }
             if (mods > 0) {
                 System.out.println("  [提示] Paper 不加载 NeoForge 模组，mods/ 里的 " + mods + " 个模组暂不生效");
             }
@@ -204,6 +216,9 @@ public final class Main {
         System.out.println("  配置: " + root.resolve(Config.FILE_NAME));
         System.out.println("  模组: " + root.resolve("mods"));
         System.out.println("  插件: " + root.resolve("plugins"));
+        if (Files.exists(root.resolve("plugins").resolve("TravelAI.jar"))) {
+            System.out.println("  AI:   /AI <问题>（首次用先在后台 /ai deepseek 装模块并 /ai key 填 Key）");
+        }
         System.out.println("  " + Util.repeat("=", 62));
     }
 
@@ -244,6 +259,7 @@ public final class Main {
         System.out.println("  首次运行会自动准备 Java " + Util.MIN_JAVA + "、安装 NeoForge " + Util.MC_VERSION
                 + "（镜像加速），生成 start.bat / start.sh 并开服。");
         System.out.println("  模组放 mods/，插件放 plugins/；想让插件和模组同时生效，把 Youer 混合核心放进 server/。");
+        System.out.println("  AI 助手：plugins/TravelAI.jar 由核心自动释放，聊天框 /AI <问题> 直接问（需 engine=paper 或混合端）。");
     }
 
     private static final class Options {
