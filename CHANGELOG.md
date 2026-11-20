@@ -1,5 +1,26 @@
 # 更新日志
 
+## v1.2.0
+
+- 新增控制面板插件 `TravelPanel`（`plugins/TravelPanel.jar`，随核心自动释放）
+  - 开服自动打开 `http://127.0.0.1:2000`（只绑 127.0.0.1，`config.yml` 可改端口）
+  - 左侧玩家列表带头像，在线亮色、离线 0.42 透明度压暗；头像走「缓存 → mc-heads/minotar（4 秒超时）→ 本地按名字哈希生成」三级兜底，断网也有脸
+  - 下方命令行以控制台身份执行（`Bukkit.dispatchCommand(ConsoleSender)` 回主线程）
+  - 日志区增量读 `logs/latest.log`，清 ANSI、按最后换行裁剪 offset，只发新行
+  - 上传服务器图标强制校验 64×64 PNG：`32×32` 会被拒（`图片必须是 64×64，当前是 32×32`），合格才写 `server-icon.png`
+- 新增三条管理命令
+  - `/tcp <配置名> <值|t|f|数字>`：改完 3 秒自动重启（`Bukkit.shutdown()` + `start.bat/start.sh` 的自动重启循环）
+  - `/tcm <模组名>` / `/tic <插件名>`：Modrinth 搜索 → 按名字打分选项目 → 按 loaders 过滤版本 → 流式下载到 `mods/`、`plugins/`
+  - 权限 `travelpanel.tcp` / `travelpanel.download` 默认 OP，非 OP 无法改配置
+- 修复：`/tcp` 判断键落在哪个文件失败（`motd` 被误写进 `travelmc.properties`）
+- 修复：`/tcp` 改的值在重启后被 Paper 停机回写覆盖 → 写入后延迟重启，实测重启后 MOTD 保留
+- 修复：Modrinth 搜索按首条命中会取错项目（`spark` → `sparklogin`），改为打分 + 多候选回退；Modrinth 的 facets 过滤也不可靠，改为先用名字排序再用 loaders 筛版本
+- 修复：`start.bat` / `start.sh` 把 `-Xms/-Xmx` 写死，改 `memory` 后重启无效 → 脚本运行时从 `travelmc.properties` 现读
+- 修复：输出重定向到文件时进度条每帧写一行 → 非交互终端按 10% 步进换行
+- 核心 v1.2.0：`Setup.ensurePlugins` 检测 `plugins/` 里 `TravelAI.jar`、`TravelPanel.jar` 是否齐全，缺则先释放内嵌资源，再兜底从 `releases/latest/download/<name>` 下载
+- 实测（Paper 26.3 build 244 + JDK 25，`-Xms1G -Xmx1G`）：面板 HTML/state/log/cmd/avatar/icon 全通；
+  `tcp motd` 改完自动重启且 MOTD 保留；`tic chunky` 下载 387 KB 落地并重启后正常加载（Chunky 1.5.66）；`tcm appleskin` 下载 78 KB 落地
+
 ## v1.1.0
 
 - 新增 AI 助手插件 `TravelAI`（Bukkit 插件，随核心自动释放到 `plugins/TravelAI.jar`）
@@ -20,6 +41,7 @@
   - CI 先编插件再编核心，Release 多挂一个 `TravelAI.jar` 附件
 - 实测（Paper 26.3 build 253 + JDK 25）：插件正常加载，`/ai deepseek` 安装、`/ai key` 掩码回显、
   `/ai <问题>` 走真实 HTTP 链路、`/ai yes` 执行 `say`/`list`、`/stop` 被白名单拦截
+
 
 ## v1.0.5
 
