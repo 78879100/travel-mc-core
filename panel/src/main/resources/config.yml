@@ -1,0 +1,6 @@
+# Travel Panel 控制面板配置
+# 面板默认只监听本机回环地址，外网访问请自行加反向代理 + 鉴权
+panel-port: 2000
+panel-bind: 127.0.0.1
+# 开服后是否自动用系统默认浏览器打开面板
+open-browser: true
