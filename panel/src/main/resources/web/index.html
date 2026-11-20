@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<title>Travel MC 控制面板</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+:root{--bg:#0d1017;--panel:#151a24;--line:#232a38;--fg:#e6ebf5;--dim:#7b8599;--accent:#39d98a;--warn:#ffb44d;--err:#ff5f5f}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:14px/1.5 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;height:100vh;display:flex;flex-direction:column}
+header{display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel)}
+#icon{width:48px;height:48px;border-radius:8px;border:1px solid var(--line);background:#0a0d13 center/cover no-repeat;flex:none;cursor:pointer}
+.titles{flex:1;min-width:0}
+h1{margin:0;font-size:16px;letter-spacing:.06em}
+h1 span{color:var(--accent)}
+#motd{margin:2px 0 0;color:var(--dim);font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stats{display:flex;gap:18px;font-size:12.5px;color:var(--dim);flex:none}
+.stats b{color:var(--fg);font-weight:600;font-size:14px}
+main{flex:1;display:flex;min-height:0}
+aside{width:232px;flex:none;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+aside h2{margin:0;padding:10px 14px 8px;font-size:11.5px;letter-spacing:.12em;color:var(--dim);text-transform:uppercase;display:flex;justify-content:space-between}
+aside h2 em{font-style:normal;color:var(--accent)}
+#players{overflow:auto;padding:0 8px 10px}
+.pl{display:flex;align-items:center;gap:9px;padding:6px 6px;border-radius:6px}
+.pl:hover{background:#1b212d}
+.pl img{width:34px;height:34px;border-radius:5px;image-rendering:pixelated;flex:none}
+.pl .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pl .n small{display:block;color:var(--dim);font-size:11px}
+.pl.on .n{color:#fff;font-weight:600}
+.pl.on img{box-shadow:0 0 0 2px var(--accent) inset}
+.pl.off{opacity:.42;filter:grayscale(.55)}
+.dot{width:7px;height:7px;border-radius:50%;flex:none}
+.pl.on .dot{background:var(--accent);box-shadow:0 0 6px var(--accent)}
+.pl.off .dot{background:#3d4457}
+.right{flex:1;display:flex;flex-direction:column;min-width:0}
+#log{flex:1;overflow:auto;padding:10px 14px;font:12.5px/1.6 ui-monospace,Consolas,"Cascadia Mono",monospace;white-space:pre-wrap;word-break:break-all;background:#0a0d13}
+#log::-webkit-scrollbar{width:10px}#log::-webkit-scrollbar-thumb{background:#242c3b;border-radius:5px}
+.c-info{color:#cfd6e4}.c-warn{color:var(--warn)}.c-err{color:var(--err)}.c-cmd{color:var(--accent)}
+footer{border-top:1px solid var(--line);background:var(--panel);padding:8px 12px;display:flex;gap:8px;align-items:center}
+footer input{flex:1;background:#0a0d13;border:1px solid var(--line);color:var(--fg);border-radius:6px;padding:9px 12px;font:13px/1.4 ui-monospace,Consolas,monospace;outline:none}
+footer input:focus{border-color:#3a6b57}
+button{background:#1d2532;color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px}
+button:hover{border-color:#3a6b57;color:#fff}
+button.primary{background:#1f5c43;border-color:#2b7d5c;color:#eafff5}
+.tip{color:var(--dim);font-size:12px;padding:0 14px 8px}
+#toast{position:fixed;right:18px;bottom:64px;background:#1c2431;border:1px solid var(--line);padding:10px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;max-width:340px}
+#toast.show{opacity:1}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <div id="icon" title="点击上传服务器图标（64×64 PNG）"></div>
+  <div class="titles">
+    <h1>TRAVEL <span>MC</span> · 控制面板</h1>
+    <p id="motd">正在连接服务器…</p>
+  </div>
+  <div class="stats">
+    <div>在线 <b id="online">–</b>/<span id="max">–</span></div>
+    <div>TPS <b id="tps">–</b></div>
+    <div>运行 <b id="uptime">–</b></div>
+  </div>
+</header>
+<main>
+  <aside>
+    <h2>玩家 <em id="pcount">0</em></h2>
+    <div id="players"><div class="tip">还没有玩家进过服务器</div></div>
+  </aside>
+  <div class="right">
+    <div id="log"><span class="c-info">等待服务器日志…</span></div>
+    <footer>
+      <input id="cmd" placeholder="输入服务器命令，直接回车执行（例：say 你好 / tcp memory 8G）" autocomplete="off">
+      <button class="primary" id="send">发送</button>
+    </footer>
+    <input type="file" id="file" accept="image/png" class="hidden">
+  </div>
+</main>
+<div id="toast"></div>
+<script>
+const logEl=document.getElementById('log'), cmdEl=document.getElementById('cmd');
+let next=0, lastHtml='', iconShown='';
+
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
+function cls(line){
+  if(/\\bERROR\\b|Exception|Failed/.test(line)) return 'c-err';
+  if(/\\bWARN\\b/.test(line)) return 'c-warn';
+  return 'c-info';
+}
+function addLog(lines){
+  if(!lines.length) return;
+  const box=document.createElement('div');
+  for(const l of lines){const s=document.createElement('div');s.className=cls(l);s.textContent=l;box.appendChild(s);}
+  const atBottom=logEl.scrollTop+logEl.clientHeight>=logEl.scrollHeight-40;
+  logEl.appendChild(box);
+  if(atBottom) logEl.scrollTop=logEl.scrollHeight;
+  while(logEl.childElementCount>600) logEl.removeChild(logEl.firstChild);
+}
+function fmtUp(s){
+  if(s<60) return s+'s';
+  if(s<3600) return Math.floor(s/60)+'m'+(s%60)+'s';
+  return Math.floor(s/3600)+'h'+Math.floor(s%3600/60)+'m';
+}
+function setIcon(v){
+  if(!v){iconShown='';document.getElementById('icon').style.backgroundImage='none';return;}
+  const url='/api/icon?t='+(v?iconShown||Date.now():'');
+  if(url!==iconShown){iconShown=url;document.getElementById('icon').style.backgroundImage="url('"+url+"')";}
+}
+async function tickState(){
+  try{
+    const r=await fetch('/api/state',{cache:'no-store'});
+    const s=await r.json();
+    document.getElementById('motd').textContent=s.motd||'';
+    document.getElementById('online').textContent=s.online;
+    document.getElementById('max').textContent=s.max;
+    document.getElementById('tps').textContent=Number(s.tps).toFixed(1);
+    document.getElementById('uptime').textContent=fmtUp(s.uptime);
+    setIcon(s.icon);
+    document.getElementById('pcount').textContent=s.players.filter(p=>p.online).length;
+    const list=s.players.slice().sort((a,b)=>(b.online-a.online)||(b.last-a.last));
+    const key=JSON.stringify(list.map(p=>[p.name,p.online]));
+    if(key!==lastHtml){
+      lastHtml=key;
+      document.getElementById('players').innerHTML=list.length?list.map(p=>{
+        const t=new Date(p.last*1000);
+        const when=(Date.now()-p.last*1000)<120000?'刚刚在线':t.toLocaleDateString()+' '+t.toTimeString().slice(0,5);
+        return `<div class="pl ${p.online?'on':'off'}" title="${p.name}">
+          <img src="/api/avatar/${encodeURIComponent(p.name)}.png" loading="lazy" alt="">
+          <div class="n">${p.name}<small>${p.online?'在线':when}</small></div>
+          <div class="dot"></div></div>`;
+      }).join(''):'<div class="tip">还没有玩家进过服务器</div>';
+    }
+  }catch(e){}
+}
+async function tickLog(){
+  try{
+    const r=await fetch('/api/log?from='+next,{cache:'no-store'});
+    const d=await r.json();
+    if(d.next!==undefined&&d.next!==next){next=d.next;}
+    addLog(d.lines||[]);
+  }catch(e){}
+}
+async function send(){
+  const v=cmdEl.value.trim();
+  if(!v) return;
+  cmdEl.value='';
+  addLog(['> '+v]);
+  const body=new URLSearchParams({cmd:v});
+  try{
+    const r=await fetch('/api/cmd',{method:'POST',body});
+    const d=await r.json();
+    if(!d.ok) toast('执行失败：'+(d.error||''));
+  }catch(e){toast('发送失败：'+e);}
+}
+document.getElementById('send').onclick=send;
+cmdEl.addEventListener('keydown',e=>{if(e.key==='Enter')send();});
+document.getElementById('icon').onclick=()=>document.getElementById('file').click();
+document.getElementById('file').onchange=async e=>{
+  const f=e.target.files[0]; if(!f) return;
+  if(!f.name.toLowerCase().endsWith('.png')){toast('必须是 PNG 图片');return;}
+  try{
+    const buf=await f.arrayBuffer();
+    const r=await fetch('/api/icon',{method:'POST',headers:{'Content-Type':'image/png'},body:buf});
+    const d=await r.json();
+    if(d.ok){toast('图标已上传（64×64），重启后客户端生效');lastHtml='';iconShown='';tickState();}
+    else toast(d.error||'上传失败');
+  }catch(err){toast('上传失败：'+err);}
+  e.target.value='';
+};
+tickState();tickLog();
+setInterval(tickState,2000);setInterval(tickLog,1200);
+</script>
+</body>
+</html>
