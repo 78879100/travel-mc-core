@@ -60,8 +60,20 @@ public final class Setup {
                     buf.write(chunk, 0, n);
                 }
                 in.close();
-                Files.write(target, buf.toByteArray());
-                done.add(name);
+                Path tmp = target.resolveSibling(name + ".part");
+                Files.write(tmp, buf.toByteArray());
+                if (Util.moveReplacing(tmp, target)) {
+                    done.add(name);
+                    continue;
+                }
+                // 典型场景：服务器还开着，plugins/xxx.jar 被 JVM 锁着
+                System.out.println("      plugins/" + name + " 被占用（服务器是不是还开着？），"
+                        + "本次跳过；关掉服务器后重跑一次核心就会补上");
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (IOException ignored) {
+                    // 删不掉就算了
+                }
                 continue;
             }
             // 核心里没有内嵌资源：从 GitHub Release 补一个
@@ -168,7 +180,7 @@ public final class Setup {
                 + "    /tcp <配置名>           只看当前值；不带参数列出全部配置\n"
                 + "    /tcm <模组名>           从 Modrinth 下载 NeoForge 模组到 mods/\n"
                 + "    /tic <插件名>           从 Modrinth 下载 Paper/Bukkit 插件到 plugins/\n"
-                + "  面板和这三个命令都在 plugins/TravelPanel.jar 里，需要 engine=paper 或 Youer 混合端。\n\n"
+                + "  面板和这两个命令都在 plugins/TravelPanel.jar 里，需要 engine=paper 或 Youer 混合端。\n\n"
                 + "七、常用命令\n"
                 + "  java -jar TravelMC-Core.jar --setup-only        只生成脚本，不启动服务器\n"
                 + "  java -jar TravelMC-Core.jar --engine paper      纯插件模式（Paper " + Util.MC_VERSION + "）\n"
