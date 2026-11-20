@@ -30,14 +30,19 @@ find "$ROOT/src/main/java" -name '*.java' > "$ROOT/build/sources.txt"
 
 echo "[3/3] 拷贝资源并打包"
 cp -R "$ROOT/src/main/resources/." "$OUT/"
-# 内嵌 Travel AI 插件：核心首次运行会自动把它释放到 plugins/TravelAI.jar
-if [ -f "$ROOT/plugin/dist/TravelAI.jar" ]; then
-  mkdir -p "$OUT/plugins"
-  cp "$ROOT/plugin/dist/TravelAI.jar" "$OUT/plugins/TravelAI.jar"
-  echo "      已内嵌 TravelAI.jar ($(wc -c < "$ROOT/plugin/dist/TravelAI.jar") 字节)"
-else
-  echo "      [提示] 没有 plugin/dist/TravelAI.jar，先跑 plugin/build.sh 才能把 AI 插件打进核心"
-fi
+# 内嵌两个插件：核心首次运行会自动把它们释放到 plugins/
+#   TravelAI.jar     AI 聊天助手（/AI 问题）
+#   TravelPanel.jar  控制面板（127.0.0.1:2000）+ /tcp /tcm /tic
+mkdir -p "$OUT/plugins"
+for pair in "plugin/dist/TravelAI.jar:TravelAI.jar" "panel/dist/TravelPanel.jar:TravelPanel.jar"; do
+  src="$ROOT/${pair%%:*}"; name="${pair##*:}"
+  if [ -f "$src" ]; then
+    cp "$src" "$OUT/plugins/$name"
+    echo "      已内嵌 $name ($(wc -c < "$src") 字节)"
+  else
+    echo "      [提示] 没有 $src，先跑对应目录的 build.sh 才能把它打进核心"
+  fi
+done
 "$JAR" cfe "$DIST/TravelMC-Core.jar" mc.travel.core.Main -C "$OUT" .
 
 echo

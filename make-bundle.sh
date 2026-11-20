@@ -31,11 +31,14 @@ echo "[1/4] 准备目录结构"
 rm -rf "$BUNDLE" "$ZIP"
 mkdir -p "$BUNDLE/server" "$BUNDLE/plugins"
 cp "$JAR" "$BUNDLE/TravelMC-Core.jar"
-# 包内直接带上 Travel AI 插件，解压后聊天框就能用 /AI（需 engine=paper 或混合端）
-if [ -f "$ROOT/plugin/dist/TravelAI.jar" ]; then
-  cp "$ROOT/plugin/dist/TravelAI.jar" "$BUNDLE/plugins/TravelAI.jar"
-  echo "      已放入 plugins/TravelAI.jar"
-fi
+# 包内直接带上两个插件：AI 助手 + 控制面板（需 engine=paper 或混合端）
+for pair in "plugin/dist/TravelAI.jar:TravelAI.jar" "panel/dist/TravelPanel.jar:TravelPanel.jar"; do
+  src="$ROOT/${pair%%:*}"; name="${pair##*:}"
+  if [ -f "$src" ]; then
+    cp "$src" "$BUNDLE/plugins/$name"
+    echo "      已放入 plugins/$name"
+  fi
+done
 
 echo "[2/4] 安装 NeoForge 26.3（官方源失败时自动走 BMCLAPI 镜像补依赖）"
 "$JAVA_BIN" -jar "$BUNDLE/TravelMC-Core.jar" --dir "$BUNDLE" --install-neoforge --setup-only
@@ -46,7 +49,7 @@ import hashlib, json, sys, urllib.request
 
 bundle = sys.argv[1]
 api = "https://fill.papermc.io/v3/projects/paper/versions/26.3/builds"
-req = urllib.request.Request(api, headers={"User-Agent": "TravelMC-Core/1.1.0"})
+req = urllib.request.Request(api, headers={"User-Agent": "TravelMC-Core/1.0.4"})
 builds = json.load(urllib.request.urlopen(req, timeout=60))
 dl = builds[0]["downloads"]["server:default"]
 name, url = dl["name"], dl["url"]
@@ -54,7 +57,7 @@ want = dl["checksums"]["sha256"].lower()
 
 target = bundle + "/server/" + name
 print("      正在下载 " + name)
-req = urllib.request.Request(url, headers={"User-Agent": "TravelMC-Core/1.1.0"})
+req = urllib.request.Request(url, headers={"User-Agent": "TravelMC-Core/1.0.4"})
 with urllib.request.urlopen(req, timeout=300) as r, open(target, "wb") as f:
     data = r.read()
     f.write(data)
