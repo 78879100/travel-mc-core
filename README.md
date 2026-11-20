@@ -2,7 +2,7 @@
 
 **Minecraft Java 版 26.3 服务端核心 ｜ 模组用 NeoForge，插件用 Bukkit/Paper，一个 jar 全管**
 
-把 `TravelMC-Core.jar` 丢进一个空文件夹，双击就行。核心会自动补齐 Java 25、自动安装 NeoForge 26.3、自动生成 `start.bat` 并开服；控制台和启动脚本里都会打出巨大的 **TRAVEL MC** 字样；`plugins/` 里还会自动放好 AI 插件，玩家直接 `/AI 问题` 就能问 AI。
+把 `TravelMC-Core.jar` 丢进一个空文件夹，双击就行。核心会自动补齐 Java 25、自动安装 NeoForge 26.3、自动生成 `start.bat` 并开服；控制台和启动脚本里都会打出巨大的 **TRAVEL MC** 字样。
 
 ```
 ████████╗██████╗  █████╗ ██╗   ██╗███████╗██╗
@@ -25,25 +25,27 @@
 | 能力 | 说明 |
 | --- | --- |
 | 自动补 Java | 找不到 Java 25 时自动下载 Temurin 25 到 `runtime/`，不用手动装 |
-| 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar` |
+| 下载进度条 | 所有下载都是单行动态进度条：`[########--------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-244.jar` |
 | 单窗口运行 | 服务器直接在核心所在的那个窗口里启动，不会再弹出第二个 cmd 窗口，也没有蓝底配色 |
 | 自动装 NeoForge | 首次运行自动下载 NeoForge 26.3 安装器，依赖走国内镜像补齐，装完即可用 |
 | 自带两个核心 | Release 提供 `TravelMC-Core-Full.zip`，包内直接带 NeoForge 26.3 依赖库 + Paper 26.3 服务端 jar，解压双击就能开服 |
 | 启动进度条 | 准备启动的 6 个步骤也走进度条：`[###############-------]  66.7%  [4/6] 准备服务端核心` |
-| 自动生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`；巨幅 TRAVEL MC 横幅由 `banner.txt` 承载，`start.bat` 用 `type` 输出，中文 Windows 不乱码 |
+| 自動生成启动脚本 | 每次运行都会重写 `start.bat` / `start.sh`；巨幅 TRAVEL MC 横幅由 `banner.txt` 承载，`start.bat` 用 `type` 输出，中文 Windows 不乱码 |
 | 自动开服 | 准备完直接拉起服务器，崩服后 5 秒自动重启 |
 | 模组 + 插件 | 原生 NeoForge 跑模组；`server/` 放入 Youer 之类混合核心即同时跑插件；纯插件可切 Paper |
 | 自带优化参数 | 默认 Aikar GC 参数 + UTF-8 控制台，4G 内存起步即可开服 |
 | 内置 AI 助手 | 玩家聊天框 `/AI <问题>` 直接问 AI，支持 DeepSeek / Kimi / 豆包 / GPT；后台 `/ai <名字>` 装服务商、`/ai key` 填 Key（回显打星号） |
+| 网页控制面板 | 开服自动打开 `http://127.0.0.1:2000`：左侧玩家列表带头像（在线亮 / 离线暗）、下方命令行、日志实时滚动、一键上传 64×64 服务器图标 |
+| 三条管理命令 | `/tcp <配置名> <值>` 改配置并自动重启；`/tcm <模组名>` / `/tic <插件名>` 从 Modrinth 直接下载到 `mods/`、`plugins/` |
 
 ## 快速开始
 
 **方式 A：完整包（推荐，离线可用）**
 
 1. 下载 [`TravelMC-Core-Full.zip`](https://github.com/78879100/travel-mc-core/releases/latest)（约 186 MB）
-2. 解压到任意文件夹 —— 里面**已经有 NeoForge 26.3 的依赖库**（`libraries/`）**和 Paper 26.3 的核心**（`server/`），`plugins/` 里也已经有 `TravelAI.jar`
+2. 解压到任意文件夹 —— 里面**已经有 NeoForge 26.3 的依赖库**（`libraries/`）**和 Paper 26.3 的 `server/paper-26.3-252.jar`**
 3. 双击 `start.bat`（Linux / macOS 执行 `bash start.sh`）直接开服，不再联网下载核心
-4. 想跑 AI / 纯插件模式：把 `travelmc.properties` 里的 `engine` 改成 `paper`
+4. 想跑纯插件模式：把 `travelmc.properties` 里的 `engine` 改成 `paper`
 
 **方式 B：单文件 jar（体积小，首次联网自装）**
 
@@ -67,7 +69,7 @@
   [##########################] 100.0%  [6/6] 启动服务器
 ```
 
-每一步下面照样打印细节（识别到的系统与 Java、目录清单、引擎版本、模组/插件数量）。第 2 步还会把内置的 `TravelAI.jar` 释放到 `plugins/`。
+每一步下面照样打印细节（识别到的系统与 Java、目录清单、引擎版本、模组/插件数量）。
 
 ## 目录结构
 
@@ -82,14 +84,15 @@
 ├── server.properties       服务器配置（MOTD 已预设 Travel MC）
 ├── eula.txt                EULA（首次运行自动写 true）
 ├── mods/                   NeoForge 模组，丢进去自动加载
-├── plugins/                Bukkit/Paper 插件（首次运行自动放好 TravelAI.jar）
+├── plugins/                Bukkit/Paper 插件（需要混合核心或 Paper）
 ├── config/                 模组/插件配置
 ├── world/                  地图存档
 ├── logs/                   日志
 ├── backups/                备份放这里
 ├── server/                 服务端 jar（自动安装器、或你手动放的 Youer/Paper）
 ├── libraries/              NeoForge 依赖库（自动安装产物）
-└── runtime/                自动下载的 Java 25
+├── runtime/                自动下载的 Java 25
+└── plugins/TravelPanel/    面板数据（玩家名单、头像缓存、上传的图标）
 ```
 
 ## AI 助手（Travel AI）
@@ -110,8 +113,6 @@
 /ai list                            # 看已装什么、Key 填好没
 /ai model deepseek deepseek-chat    # 换模型（火山方舟填 endpoint id）
 /ai use deepseek                    # 设为默认服务商
-/ai base deepseek https://...       # 换接口地址（自建代理）
-/ai yes | /ai no                    # 执行 / 放弃 AI 给出的指令
 ```
 
 - 所有玩家都能提问；**只有 OP 能让 AI 代执行服务器指令**
@@ -119,6 +120,41 @@
 - 只放行 `say / tp / give / time / weather / gamemode / effect / summon` 等常用指令；`op / deop / stop / reload / execute / whitelist` 一律拦截
 - Key 存在 `plugins/TravelAI/keys.properties`，只以掩码形式显示，不写进聊天和日志
 - AI 是 Bukkit 插件：需要 `engine=paper` 或 Youer 混合端；原生 NeoForge 模式不加载 Bukkit 插件，核心启动时会直接提示
+
+## 控制面板（Travel Panel）
+
+开服后核心会把 `TravelPanel.jar` 释放到 `plugins/`，并自动打开浏览器访问 **`http://127.0.0.1:2000`**（只绑本机，外网连不上）。
+
+- **左侧玩家列表**：名字 + 头像；在线玩家亮色，离线玩家压暗（0.42 透明度），按最后上线时间排序
+- **头像三级兜底**：先读 `plugins/TravelPanel/avatars/` 缓存 → 再试 mc-heads / minotar（4 秒超时）→ 都失败就按名字哈希生成本地像素头像，断网也不会空着
+- **下方命令行**：输入什么就直接以控制台身份执行（`say` / `whitelist` / `stop` 都行），回显在日志区
+- **日志区**：增量拉 `logs/latest.log`，已清掉 ANSI 颜色码，只取新行，不刷整屏
+- **服务器图标**：面板里点上传，**强制校验必须是 64×64 的 PNG**，尺寸不对会直接返回「图片必须是 64×64，当前是 32×32」并拒绝写入；合格的写进 `server-icon.png`，重启后生效
+- **不改端口**：想换端口改 `plugins/TravelPanel/config.yml` 的 `panel-port` / `panel-bind` / `open-browser`
+
+## 三条管理命令
+
+| 命令 | 作用 | 权限 |
+| --- | --- | --- |
+| `/tcp <配置名> <值>` | 改配置：开关写 `t` / `f`，数字直接写数字；写到 `server.properties`（有这个键时）或 `travelmc.properties`，**3 秒后自动重启服务器**让新值生效 | `travelpanel.tcp`（默认 OP） |
+| `/tcm <模组名>` | 从 Modrinth 搜模组，只取支持 NeoForge 的最新版本，下载到 `mods/` | `travelpanel.download`（默认 OP） |
+| `/tic <插件名>` | 同上，取支持 Paper/Bukkit 的版本，下载到 `plugins/` | `travelpanel.download`（默认 OP） |
+
+```
+/tcp motd TRAVEL MC 欢迎你
+/tcp online-mode f
+/tcp max-players 50
+/tcp memory 8G
+/tcm jei
+/tic chunky
+```
+
+- 下载是「先写 `.part` 再改名」，中途断网不会留下半个坏 jar；下完会打印 `已下载 Chunky 1.5.66 → plugins/Chunky-Paper-1.5.66.jar (387 KB)，重启服务器后生效`
+- 搜索按名字打分（slug / 标题精确匹配优先），所以 `/tic spark` 不会再误抓成 `sparklogin`
+- 找不到适配 26.3 的版本时会明确告诉你试过哪些项目，而不是硬塞一个不兼容的 jar
+- **只有 OP 能改配置**；非 OP 只能看面板，让 AI 代执行指令的权限同样只给 OP（见上一节 `/ai yes`）
+- `/tcp` 改的是「真正生效」的那个文件：`server.properties` 里有这个键就改它，否则改 `travelmc.properties`；改完 3 秒重启，实测重启后新值不会被 Paper 停机回写覆盖
+- 启动脚本的内存参数不再写死，运行时从 `travelmc.properties` 现读，所以 `/tcp memory 8G` 重启就生效，不用重跑核心
 
 ## 插件 + 模组
 
@@ -181,24 +217,24 @@ java -jar TravelMC-Core.jar [参数]
 git clone https://github.com/78879100/travel-mc-core.git
 cd travel-mc-core
 
-# 1) 先编 AI 插件（核心会把它内嵌进 jar）
-JAVA_HOME=/path/to/jdk25 ./plugin/build.sh
-# 产物：plugin/dist/TravelAI.jar
+# 1) 先编两个插件（核心会把它们内嵌进 jar）
+JAVA_HOME=/path/to/jdk25 ./plugin/build.sh   # 产物：plugin/dist/TravelAI.jar
+JAVA_HOME=/path/to/jdk25 ./panel/build.sh    # 产物：panel/dist/TravelPanel.jar
 
 # 2) 再编核心
 JAVA_HOME=/path/to/jdk25 ./build.sh
-# 产物：dist/TravelMC-Core.jar（内含 plugins/TravelAI.jar）
+# 产物：dist/TravelMC-Core.jar（内含 plugins/TravelAI.jar + plugins/TravelPanel.jar）
 
-# 3) 想生成完整包（NeoForge 依赖 + Paper 核心 + AI 插件）
+# 3) 想生成完整包（NeoForge 依赖 + Paper 核心 + 两个插件）
 JAVA_HOME=/path/to/jdk25 ./make-bundle.sh
 ```
 
-`plugin/build.sh` 会自动从 `repo.papermc.io` 拉 `paper-api` 编译依赖，也可以 `PAPER_API=/path/to/paper-api.jar` 指定本地 jar。
+`plugin/build.sh` 与 `panel/build.sh` 都会自动从 `repo.papermc.io` 拉 `paper-api` 编译依赖，也可以 `PAPER_API=/path/to/paper-api.jar` 指定本地 jar。
 
-推送 `v*` tag 时 GitHub Actions 会自动构建，并把 jar、完整包、TravelAI.jar 一起挂到 Release：
+推送 `v*` tag（或直接 push main）时 GitHub Actions 会自动构建，并把 `TravelMC-Core.jar`、`TravelMC-Core-Full.zip`、`TravelAI.jar`、`TravelPanel.jar` 一起挂到 Release：
 
 ```bash
-git tag v1.1.0 && git push origin v1.1.0
+git tag v1.2.0 && git push origin v1.2.0
 ```
 
 源码结构：
@@ -208,7 +244,7 @@ src/main/java/mc/travel/core/
 ├── Main.java            入口、参数解析、6 步流程编排
 ├── Banner.java          巨幅 TRAVEL MC 横幅
 ├── Config.java          travelmc.properties 读写
-├── Setup.java           目录、eula、server.properties、使用说明、释放 AI 插件
+├── Setup.java           目录、eula、server.properties、使用说明
 ├── JavaEnv.java         Java 25 定位 / 自动下载 / 解压
 ├── Engine.java          引擎识别、NeoForge 产物定位、版本比较
 ├── EngineInstaller.java 安装器下载与运行、镜像补依赖、Paper 下载
@@ -222,6 +258,10 @@ plugin/src/main/java/mc/travel/ai/
 ├── Modules.java         服务商模块安装（内置 modules/<id>.jar）
 ├── KeyStore.java        API Key 存储与掩码
 └── Guard.java           指令白名单 + 从回答里抽 ```mc 代码块
+
+panel/src/main/java/mc/travel/panel/
+├── TravelPanel.java     面板主类：HttpServer 路由、/tcp /tcm /tic、玩家与头像、图标校验
+└── Json.java            零依赖 JSON 解析（解析 Modrinth 响应）
 ```
 
 ## 常见问题
@@ -243,9 +283,6 @@ plugin/src/main/java/mc/travel/ai/
 
 **`start.bat` 报 `'��║' is not recognized as an internal or external command`？**
 这是 v1.0.4 及更早版本的 BUG，v1.0.5 已修：横幅不再 `echo` 进 `.bat`，改为 `banner.txt` + `type`。升级 jar 后重新运行一次核心，`start.bat` 与 `banner.txt` 会自动重写。
-
-**`/AI` 提示“还没装 AI 服务商”？**
-先在后台执行 `/ai deepseek`（或 `kimi` / `doubao` / `gpt`）安装模块，再 `/ai key <名字> <你的Key>`。另外 AI 插件只在 `engine=paper` 或 Youer 混合端生效，NeoForge 原生模式加载不了 Bukkit 插件。
 
 **内存给多少？**
 4G 能开服带几个模组；几十个模组建议 6–8G。别超过物理内存的 70%。
