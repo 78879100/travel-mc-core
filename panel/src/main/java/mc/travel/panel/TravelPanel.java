@@ -301,14 +301,54 @@ public class TravelPanel extends JavaPlugin implements Listener {
         sendJson(ex, "{\"ok\":true,\"cmd\":" + q(c) + "}");
     }
 
+    private static final byte[] PNG_MAGIC = {(byte) 0x89, 'P', 'N', 'G', '\r', '\n', 0x1a, '\n'};
+
+    /** 浏览器上传的是 multipart/form-data，真正图片从那串 boundary 里抠出来；直接贴原始 PNG 也认。 */
+    private static byte[] extractPng(byte[] raw) {
+        int start = 0;
+        if (!(raw.length >= 8 && raw[0] == PNG_MAGIC[0] && raw[1] == 'P' && raw[2] == 'N' && raw[3] == 'G')) {
+            start = indexOf(raw, PNG_MAGIC);
+            if (start < 0) {
+                return null;
+            }
+        }
+        int end = -1;
+        for (int i = start + 8; i + 4 <= raw.length; i++) {
+            if (raw[i] == '\r' && raw[i + 1] == '\n' && raw[i + 2] == '-' && raw[i + 3] == '-') {
+                end = i;
+                break;
+            }
+        }
+        if (end < 0) {
+            end = raw.length;
+        }
+        byte[] png = new byte[end - start];
+        System.arraycopy(raw, start, png, 0, png.length);
+        return png;
+    }
+
+    private static int indexOf(byte[] hay, byte[] needle) {
+        outer:
+        for (int i = 0; i + needle.length <= hay.length; i++) {
+            for (int j = 0; j < needle.length; j++) {
+                if (hay[i + j] != needle[j]) {
+                    continue outer;
+                }
+            }
+            return i;
+        }
+        return -1;
+    }
+
     private void uploadIcon(HttpExchange ex) throws IOException {
-        byte[] data = readAll(ex.getRequestBody());
-        if (data.length == 0 || data.length > 4 * 1024 * 1024) {
+        byte[] raw = readAll(ex.getRequestBody());
+        if (raw.length == 0 || raw.length > 4 * 1024 * 1024) {
             sendJson(ex, 400, "{\"ok\":false,\"error\":\"文件为空或超过 4 MB\"}");
             return;
         }
-        if (data.length < 8 || data[0] != (byte) 0x89 || data[1] != 'P' || data[2] != 'N' || data[3] != 'G') {
-            sendJson(ex, 400, "{\"ok\":false,\"error\":\"不是 PNG 文件\"}");
+        byte[] data = extractPng(raw);
+        if (data == null || data.length < 8) {
+            sendJson(ex, 400, "{\"ok\":false,\"error\":\"不是 PNG 文件（需要 .png，64×64）\"}");
             return;
         }
         BufferedImage img;
@@ -674,11 +714,52 @@ public class TravelPanel extends JavaPlugin implements Listener {
         try (InputStream in = c.getInputStream()) {
             Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
         }
-        Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+        if (!safeMove(tmp, target)) {
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (IOException ignored) {
+                // 删不掉没关系
+            }
+            throw new IOException("目标文件被占用，无法写入 " + target.getFileName()
+                    + "（Windows 上常见于服务器正在使用该文件；关掉服务器或换个版本名再试）");
+        }
         long expect = c.getContentLengthLong();
         if (expect > 0 && Files.size(target) != expect) {
             throw new IOException("文件不完整：" + Files.size(target) + " / " + expect);
         }
+    }
+
+    /** Windows 上目标被正在运行的服务器锁住时，先把它改名腾位，再搬新文件。 */
+    private static boolean safeMove(Path tmp, Path target) {
+        try {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException first) {
+            Path old = null;
+            try {
+                if (Files.exists(target)) {
+                    old = target.resolveSibling(target.getFileName().toString().replace(".jar", "")
+                            + ".old-" + System.currentTimeMillis() + ".jar");
+                    Files.move(target, old);
+                }
+                Files.move(tmp, target);
+                if (old != null) {
+                    try {
+                        Files.deleteIfExists(old);
+                    } catch (IOException ignored) {
+                        // 旧 jar 被锁删不掉，留着也不影响新 jar
+                    }
+                }
+                return true;
+            } catch (IOException second) {
+                getLoggerStatic().warning("写入 " + target.getFileName() + " 失败：" + second.getMessage());
+                return false;
+            }
+        }
+    }
+
+    private static java.util.logging.Logger getLoggerStatic() {
+        return java.util.logging.Logger.getLogger("TravelPanel");
     }
 
     private static String httpGet(String url) throws IOException {
