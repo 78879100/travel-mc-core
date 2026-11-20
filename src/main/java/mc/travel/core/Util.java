@@ -9,6 +9,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
@@ -20,7 +21,7 @@ import java.util.Locale;
 public final class Util {
 
     public static final String CORE_NAME = "Travel MC Core";
-    public static final String CORE_VERSION = "1.1.0";
+    public static final String CORE_VERSION = "1.2.0";
     public static final String MC_VERSION = "26.3";
     /** 26.3 服务端要求 Java 25 及以上。 */
     public static final int MIN_JAVA = 25;
@@ -40,7 +41,9 @@ public final class Util {
         private final String label;
         private long lastPaint;
         private int lastLength;
-        private long lastDone;
+        /** 输出被重定向到文件/管道（没有交互终端）时，改为每 10% 打印一行，避免日志被上千帧刷爆。 */
+        private final boolean interactive = System.console() != null;
+        private int lastStep = -1;
 
         public ProgressBar(String label) {
             this.label = label == null ? "" : label;
@@ -53,6 +56,13 @@ public final class Util {
             if (!complete && now - lastPaint < 80) {
                 return;
             }
+            if (!interactive) {
+                int step = total > 0 ? (int) Math.floor(done * 10.0 / total) : lastStep + 1;
+                if (step == lastStep && !complete) {
+                    return;
+                }
+                lastStep = step;
+            }
             lastPaint = now;
             paint(done, total);
         }
@@ -60,15 +70,19 @@ public final class Util {
         /** 收尾：画满 100% 并换行，避免后续日志接在进度条同一行。 */
         public void finish(long total) {
             paint(total > 0 ? total : lastDone, total);
-            System.out.println();
+            if (interactive) {
+                System.out.println();
+            }
         }
+
+        private long lastDone;
 
         private void paint(long done, long total) {
             lastDone = done;
             double ratio = total > 0 ? Math.min(1.0, done / (double) total) : 0.0;
             int filled = (int) Math.round(ratio * WIDTH);
             StringBuilder sb = new StringBuilder(96);
-            sb.append("\r      [");
+            sb.append(interactive ? "\r      [" : "      [");
             for (int i = 0; i < WIDTH; i++) {
                 sb.append(i < filled ? '#' : '-');
             }
@@ -83,7 +97,12 @@ public final class Util {
                 sb.append(' ');
             }
             lastLength = sb.length();
-            System.out.print(sb);
+            if (interactive) {
+                System.out.print(sb);
+            } else {
+                sb.append('\n');
+                System.out.print(sb);
+            }
             System.out.flush();
         }
     }
