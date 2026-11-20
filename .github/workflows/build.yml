@@ -27,12 +27,17 @@ jobs:
           chmod +x plugin/build.sh
           ./plugin/build.sh
 
-      - name: Build TravelMC-Core.jar（内嵌 TravelAI 插件）
+      - name: Build TravelPanel plugin（控制面板 + /tcp /tcm /tic）
+        run: |
+          chmod +x panel/build.sh
+          ./panel/build.sh
+
+      - name: Build TravelMC-Core.jar（内嵌两个插件）
         run: |
           chmod +x build.sh
           ./build.sh
 
-      - name: Build TravelMC-Core-Full.zip（内置 NeoForge + Paper 核心 + TravelAI）
+      - name: Build TravelMC-Core-Full.zip（内置 NeoForge + Paper 核心 + 两个插件）
         run: |
           chmod +x make-bundle.sh
           ./make-bundle.sh
@@ -45,26 +50,42 @@ jobs:
             dist/TravelMC-Core.jar
             dist/TravelMC-Core-Full.zip
             plugin/dist/TravelAI.jar
+            panel/dist/TravelPanel.jar
 
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.1.0
-          name: Travel MC Core v1.1.0（内置 AI 助手）
+          tag_name: v1.2.0
+          name: Travel MC Core v1.2.0（内置控制面板 + AI 助手）
           body: |
-            Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）+ 内置 AI 聊天助手。
+            Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）+ 内置控制面板与 AI 聊天助手。
 
             **三种下载：**
 
-            1. `TravelMC-Core-Full.zip`（推荐，约 186 MB）——**包内直接就有两个核心和 AI 插件**：
+            1. `TravelMC-Core-Full.zip`（推荐，约 186 MB）——**包内直接就有两个核心和两个插件**：
                - NeoForge 26.3.0.101 完整服务端依赖（`libraries/`、`unix_args.txt`、`win_args.txt`）
-               - Paper 26.3 的 `server/paper-26.3-253.jar`（Bukkit 插件核心）
+               - Paper 26.3 的 `server/paper-26.3-252.jar`（Bukkit 插件核心）
                - `plugins/TravelAI.jar`（AI 助手，已放好）
+               - `plugins/TravelPanel.jar`（控制面板 + /tcp /tcm /tic，已放好）
                - 解压后双击 `start.bat`（Linux/macOS 用 `start.sh`）直接开服
-            2. `TravelMC-Core.jar`（约 80 KB）——只有一个 jar，首次运行自己联网装核心，并自动把 AI 插件释放到 `plugins/`
-            3. `TravelAI.jar`（约 33 KB）——单独的 AI 插件，已经自己搭好 Paper/Youer 的可以只拿这个
+            2. `TravelMC-Core.jar`（约 103 KB）——只有一个 jar，首次运行自己联网装核心，并把两个插件释放到 `plugins/`（核心里没有对应文件时自动从 GitHub Release 下载）
+            3. `TravelAI.jar` / `TravelPanel.jar`——单独的插件，已经自己搭好 Paper/Youer 的可以只拿这两个
 
-            **v1.1.0 新增：AI 助手（Travel AI）**
+            **v1.2.0 新增：控制面板 + 三条管理命令（Travel Panel）**
+
+            - 开服后自动打开 `http://127.0.0.1:2000/`（只监听本机回环，不对外暴露）
+            - 面板左侧是在这个服玩过的人：**在线亮色、离线灰暗（0.42 透明度）**，头像自动拉取（缓存 → mc-heads/minotar → 本地按名字生成的方块头像）
+            - 面板底部是命令行：直接敲 `say 你好`、`tcp memory 8G` 等命令，以控制台身份执行，输出实时回显（增量读 `logs/latest.log`）
+            - 点左上角图标即可上传服务器图标，**强制校验 64×64 PNG**：32×32 会被直接拒绝并提示「图片必须是 64×64，当前是 32×32」；合格才写入 `server-icon.png`
+            - `/tcp <配置名> <值>`：改配置——`server.properties` 里有的项就写那里，否则写 `travelmc.properties`；`t`=开 `f`=关 数字=数字，**改完 3 秒后自动重启服务器**
+            - `/tcp <配置名>` 只看当前值，`/tcp` 不带参数列出两个配置文件里的全部项
+            - `/tcm <模组名>`：从 Modrinth 搜索并下载支持 NeoForge 的最新版本到 `mods/`
+            - `/tic <插件名>`：从 Modrinth 搜索并下载支持 Paper/Bukkit 的最新版本到 `plugins/`
+            - 两个下载命令都按名字打分选项目（`spark` 不会再被 `sparklogin` 抢走），版本不兼容 26.3 时会明说试过哪些项目
+            - 三个命令默认只有 OP / 控制台可用（`travelpanel.tcp` / `travelpanel.download` 权限），非 OP 改不了配置
+            - 启动脚本内存改为运行时从 `travelmc.properties` 现读：`/tcp memory 8G` 重启即生效，不用重跑核心
+
+            **v1.1.0 已有：AI 助手（Travel AI）**
 
             - 玩家聊天框输入 `/AI <问题>` 直接问 AI，支持 **DeepSeek / Kimi / 豆包 / GPT** 四家
             - 后台（控制台）输入 `/ai deepseek`（或 `kimi` / `doubao` / `gpt`）就安装对应服务商的 API 模块
@@ -74,10 +95,10 @@ jobs:
             - 权限：所有玩家都能提问；**只有 OP 能让 AI 代执行服务器指令**，且必须先 `/ai yes` 确认，
               并只放行 `say/tp/give/time/weather/gamemode` 等常用指令，`op/stop/reload/execute` 这类一律拦截
 
-            > AI 是 Bukkit 插件，需要 `engine=paper` 或用 Youer 混合端；原生 NeoForge 模式不加载 Bukkit 插件，
-             > 核心启动时会直接提示这一点。
+            > AI 与控制面板都是 Bukkit 插件，需要 `engine=paper` 或用 Youer 混合端；原生 NeoForge 模式不加载 Bukkit 插件，
+             > 核心启动时会把这一点直接写出来。
 
-            **前几版已有：**
+            **更早版本已有：**
 
             - 双击 jar 自动补 Java 25 → 装 NeoForge 26.3 → 生成 start.bat → 自动开服
             - 下载改动态进度条：`[######----------] 45.2%  26.1 MB / 57.8 MB  paper-26.3-252.jar`
@@ -87,4 +108,5 @@ jobs:
             dist/TravelMC-Core.jar
             dist/TravelMC-Core-Full.zip
             plugin/dist/TravelAI.jar
+            panel/dist/TravelPanel.jar
           make_latest: true
