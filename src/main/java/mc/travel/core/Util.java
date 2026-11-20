@@ -6,7 +6,6 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -294,14 +293,45 @@ public final class Util {
                 in.close();
                 out.close();
             }
-            try {
-                Files.move(part, target, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
-            } catch (AtomicMoveNotSupportedException e) {
-                Files.move(part, target, StandardCopyOption.REPLACE_EXISTING);
+            if (!moveReplacing(part, target)) {
+                throw new IOException("目标文件被占用，无法替换：" + target
+                        + "（Windows 上通常是服务器还开着、或另一个程序正在读这个文件；请关掉服务器后重试）");
             }
             return done;
         } finally {
             conn.disconnect();
+        }
+    }
+
+    /**
+     * 把 tmp 落到 target。Windows 上 jar 被正在跑的服务器占着时，直接覆盖会抛
+     * 「另一个程序已锁定文件的一部分，进程无法访问」；这里退一步先把旧文件改名腾位，再搬新的。
+     * 真搬不动就返回 false，由调用方给出中文提示，不会把整个启动流程炸掉。
+     */
+    public static boolean moveReplacing(Path tmp, Path target) {
+        try {
+            Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            return true;
+        } catch (IOException first) {
+            Path keep = null;
+            try {
+                if (Files.exists(target)) {
+                    keep = target.resolveSibling(target.getFileName().toString() + ".old."
+                            + System.currentTimeMillis());
+                    Files.move(target, keep);
+                }
+                Files.move(tmp, target);
+                if (keep != null) {
+                    try {
+                        Files.deleteIfExists(keep);
+                    } catch (IOException ignored) {
+                        // 旧文件被锁删不掉无所谓，留着不影响新文件
+                    }
+                }
+                return true;
+            } catch (IOException second) {
+                return false;
+            }
         }
     }
 
