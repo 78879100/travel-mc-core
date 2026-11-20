@@ -1,7 +1,6 @@
 package mc.travel.core;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
@@ -28,33 +27,53 @@ public final class Setup {
         }
     }
 
+
+    /** 核心自带的两个插件。核心里已内嵌一份，plugins/ 里没有就释放；连内嵌都没有（用户拿的是旧核心）时从 GitHub Release 下载。 */
+    public static final String[][] BUNDLED_PLUGINS = {
+            {"TravelAI.jar", "AI 聊天助手（/AI 问题）"},
+            {"TravelPanel.jar", "控制面板（127.0.0.1:2000）+ /tcp /tcm /tic"}
+    };
+
+    private static final String RELEASE_LATEST =
+            "https://github.com/78879100/travel-mc-core/releases/latest/download/";
+
     /**
-     * 把核心内嵌的 Travel AI 插件释放到 plugins/：玩家就能在聊天框用 /AI 问题。
-     * 目标文件已存在时不动，方便服主自己升级插件版本。
+     * 保证 plugins/ 里两个插件都在。
+     * 返回释放/下载成功的插件名列表（已存在的跳过，返回空列表）。
      */
-    public static boolean ensureAiPlugin(Path root) throws IOException {
-        Path target = root.resolve("plugins").resolve("TravelAI.jar");
-        if (Files.exists(target)) {
-            return false;
-        }
-        java.io.InputStream in = Setup.class.getClassLoader().getResourceAsStream("plugins/TravelAI.jar");
-        if (in == null) {
-            return false;
-        }
-        try {
-            java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
-            byte[] chunk = new byte[8192];
-            int n;
-            while ((n = in.read(chunk)) > 0) {
-                buf.write(chunk, 0, n);
+    public static java.util.List<String> ensurePlugins(Path root) throws IOException {
+        java.util.List<String> done = new java.util.ArrayList<String>();
+        Path plugins = root.resolve("plugins");
+        Files.createDirectories(plugins);
+        for (String[] item : BUNDLED_PLUGINS) {
+            String name = item[0];
+            Path target = plugins.resolve(name);
+            if (Files.exists(target) && Files.size(target) > 1024) {
+                continue;
             }
-            Files.createDirectories(target.getParent());
-            Files.write(target, buf.toByteArray());
-        } finally {
-            in.close();
+            java.io.InputStream in = Setup.class.getClassLoader().getResourceAsStream("plugins/" + name);
+            if (in != null) {
+                java.io.ByteArrayOutputStream buf = new java.io.ByteArrayOutputStream();
+                byte[] chunk = new byte[8192];
+                int n;
+                while ((n = in.read(chunk)) > 0) {
+                    buf.write(chunk, 0, n);
+                }
+                in.close();
+                Files.write(target, buf.toByteArray());
+                done.add(name);
+                continue;
+            }
+            // 核心里没有内嵌资源：从 GitHub Release 补一个
+            System.out.println("      plugins/" + name + " 不在核心里，正在从 GitHub 下载…");
+            Util.ProgressBar bar = new Util.ProgressBar(name);
+            Util.download(RELEASE_LATEST + name, target, bar);
+            bar.finish(Files.size(target));
+            done.add(name);
         }
-        return true;
+        return done;
     }
+
 
     public static boolean ensureEula(Path root) throws IOException {
         Path eula = root.resolve("eula.txt");
@@ -133,18 +152,30 @@ public final class Setup {
                 + "    /AI 问题内容                     直接问 AI\n"
                 + "  服主在服务器后台（控制台）输入：\n"
                 + "    /ai deepseek                    安装 DeepSeek 模块（也支持 kimi / doubao / gpt）\n"
-                + "    /ai key deepseek <你的Key>      填 API Key（游戏内 OP 输 /ai key deepseek 后在下一条聊天粘贴，显示为 ****）\n"
+                + "    /ai key deepseek <你的Key>      填 API Key（游戏内 OP 输入 /ai key deepseek 后在下一条聊天粘贴，显示为 ****）\n"
                 + "    /ai list                        看已装哪些服务商、Key 是否填好\n"
                 + "  权限：所有玩家都能提问；只有 OP 能让 AI 代执行服务器指令，\n"
                 + "        并且要先输入 /ai yes 确认，只放行 say/tp/give/time/weather 等常用指令。\n"
                 + "  AI 插件是 Bukkit 插件，需要 engine=paper 或 Youer 混合端才会加载。\n\n"
-                + "六、常用命令\n"
+                + "六、控制面板（Travel Panel）\n"
+                + "  开服后会自动打开 http://127.0.0.1:2000/ （只监听本机，不对外网开放）：\n"
+                + "    - 左侧：在这个服玩过的人，在线亮色、离线灰暗，头像自动拉取；\n"
+                + "    - 底部：命令行，直接敲 say 你好 / tcp memory 8G 这类命令，输出实时回显；\n"
+                + "    - 左上角图标：点一下上传服务器图标，必须是 64×64 的 PNG，否则会被拒绝。\n"
+                + "  三条命令（后台或游戏内 OP）：\n"
+                + "    /tcp <配置名> <值>      改配置（server.properties 里有的项就写那里，否则写 travelmc.properties），\n"
+                + "                            t=开 f=关 数字=数字，改完 3 秒后自动重启；\n"
+                + "    /tcp <配置名>           只看当前值；不带参数列出全部配置\n"
+                + "    /tcm <模组名>           从 Modrinth 下载 NeoForge 模组到 mods/\n"
+                + "    /tic <插件名>           从 Modrinth 下载 Paper/Bukkit 插件到 plugins/\n"
+                + "  面板和这三个命令都在 plugins/TravelPanel.jar 里，需要 engine=paper 或 Youer 混合端。\n\n"
+                + "七、常用命令\n"
                 + "  java -jar TravelMC-Core.jar --setup-only        只生成脚本，不启动服务器\n"
                 + "  java -jar TravelMC-Core.jar --engine paper      纯插件模式（Paper " + Util.MC_VERSION + "）\n"
                 + "  java -jar TravelMC-Core.jar --install-neoforge  强制重装 NeoForge 核心\n"
                 + "  java -jar TravelMC-Core.jar --memory 8G         改内存\n"
                 + "  java -jar TravelMC-Core.jar --help              查看全部参数\n\n"
-                + "七、注意事项\n"
+                + "八、注意事项\n"
                 + "  - Minecraft " + Util.MC_VERSION + " 服务端必须用 Java " + Util.MIN_JAVA + "，低版本会直接启动失败；\n"
                 + "  - 首次启动已写入 eula=true，表示你同意 https://aka.ms/MinecraftEULA；\n"
                 + "  - 端口默认 25565，开服前记得在防火墙/安全组放行。\n";

@@ -64,11 +64,12 @@ public final class Scripts {
         return m;
     }
 
-    private static List<String> jvmArgs(Config cfg) {
+    private static List<String> jvmArgs(Config cfg, String memRef) {
         List<String> args = new ArrayList<String>();
-        String mem = normalizeMemory(cfg.get("memory", "4G"));
-        args.add("-Xms" + mem);
-        args.add("-Xmx" + mem);
+        // 内存不在生成时写死：脚本运行时从 travelmc.properties 现读，
+        // 这样 /tcp memory 8G 改完重启就生效，不用重跑核心。
+        args.add("-Xms" + memRef);
+        args.add("-Xmx" + memRef);
         for (String flag : AIKAR) {
             args.add(flag);
         }
@@ -124,8 +125,11 @@ public final class Scripts {
         sb.append("  )\n");
         sb.append(")\n");
         sb.append("\n");
+        sb.append("set \"MEM=").append(normalizeMemory(cfg.get("memory", "4G"))).append("\"\n");
+        sb.append("for /f \"usebackq tokens=2 delims==\" %%a in (`findstr /b /c:\"memory=\" travelmc.properties`) do set \"MEM=%%a\"\n");
+        sb.append("\n");
         sb.append(":travelmc_start\n");
-        sb.append("\"%JAVA%\" ").append(join(jvmArgs(cfg))).append(' ').append(targetBat(engine));
+        sb.append("\"%JAVA%\" ").append(join(jvmArgs(cfg, "%MEM%"))).append(' ').append(targetBat(engine));
         String sa = serverArgs(cfg);
         if (!sa.isEmpty()) {
             sb.append(' ').append(sa);
@@ -171,7 +175,10 @@ public final class Scripts {
         sb.append("echo\n");
         sb.append("\n");
 
-        String cmd = "\"$JAVA\" " + join(jvmArgs(cfg)) + " " + targetSh(engine);
+        sb.append("MEM=$(awk -F= '/^memory=/{print $2; exit}' travelmc.properties 2>/dev/null)\n");
+        sb.append(": \"${MEM:=").append(normalizeMemory(cfg.get("memory", "4G"))).append("}\"\n");
+        sb.append("\n");
+        String cmd = "\"$JAVA\" " + join(jvmArgs(cfg, "$MEM")) + " " + targetSh(engine);
         String sa = serverArgs(cfg);
         if (!sa.isEmpty()) {
             cmd += " " + sa;
