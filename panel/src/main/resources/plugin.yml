@@ -2,26 +2,34 @@ name: TravelPanel
 version: 1.0.0
 main: mc.travel.panel.TravelPanel
 api-version: '1.21'
-description: Travel MC 控制面板（127.0.0.1:2000）＋ /tcp /tcm /tic 管理命令
+description: Travel MC 控制面板（127.0.0.1:2000）＋ /txp /txm /txc 管理命令
 author: Travel MC
 website: https://github.com/78879100/travel-mc-core
 commands:
-  tcp:
-    description: 修改 travelmc.properties 配置（t=开 f=关 数字=数值），改完自动重启服务器
-    usage: /tcp <配置名> <数值> | /tcp <配置名>
-    permission: travelpanel.tcp
-  tcm:
+  txp:
+    description: 修改配置（t=开 f=关 数字=数值），改完自动重启服务器
+    usage: /txp <配置名> <数值> | /txp <配置名>
+    permission: travelpanel.txp
+    aliases: [tcp]
+  txm:
     description: 从 Modrinth 搜索并下载模组到 mods/
-    usage: /tcm <模组名>
+    usage: /txm <模组名>
     permission: travelpanel.download
-  tic:
+    aliases: [tcm]
+  txc:
     description: 从 Modrinth 搜索并下载插件到 plugins/
-    usage: /tic <插件名>
+    usage: /txc <插件名>
     permission: travelpanel.download
+    aliases: [tic]
 permissions:
-  travelpanel.tcp:
+  travelpanel.txp:
     description: 允许改配置文件并触发重启
     default: op
+  travelpanel.tcp:
+    description: 旧权限名（等同 travelpanel.txp）
+    default: op
+    children:
+      travelpanel.txp: true
   travelpanel.download:
     description: 允许下载模组/插件
     default: op
