@@ -27,7 +27,7 @@ jobs:
           chmod +x plugin/build.sh
           ./plugin/build.sh
 
-      - name: Build TravelPanel plugin（控制面板 + /tcp /tcm /tic）
+      - name: Build TravelPanel plugin（控制面板 + /txp /txm /txc）
         run: |
           chmod +x panel/build.sh
           ./panel/build.sh
@@ -55,8 +55,8 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.2.0
-          name: Travel MC Core v1.2.0（内置控制面板 + AI 助手）
+          tag_name: v1.2.1
+          name: Travel MC Core v1.2.1（内置控制面板 + AI 助手）
           body: |
             Minecraft Java 26.3 服务端核心（默认 NeoForge 模组引擎）+ 内置控制面板与 AI 聊天助手。
 
@@ -66,24 +66,33 @@ jobs:
                - NeoForge 26.3.0.101 完整服务端依赖（`libraries/`、`unix_args.txt`、`win_args.txt`）
                - Paper 26.3 的 `server/paper-26.3-252.jar`（Bukkit 插件核心）
                - `plugins/TravelAI.jar`（AI 助手，已放好）
-               - `plugins/TravelPanel.jar`（控制面板 + /tcp /tcm /tic，已放好）
+               - `plugins/TravelPanel.jar`（控制面板 + /txp /txm /txc，已放好）
                - 解压后双击 `start.bat`（Linux/macOS 用 `start.sh`）直接开服
             2. `TravelMC-Core.jar`（约 103 KB）——只有一个 jar，首次运行自己联网装核心，并把两个插件释放到 `plugins/`（核心里没有对应文件时自动从 GitHub Release 下载）
             3. `TravelAI.jar` / `TravelPanel.jar`——单独的插件，已经自己搭好 Paper/Youer 的可以只拿这两个
 
-            **v1.2.0 新增：控制面板 + 三条管理命令（Travel Panel）**
+            **v1.2.1：命令改名 + 进度条**
+
+            - 三条命令改名：`/txp`（改配置）、`/txm`（装模组）、`/txc`（装插件）；旧名 `tcp` / `tcm` / `tic` 保留为别名，老习惯照样能用
+            - 面板顶部新增进度条：打开面板时显示「连接面板 0→100%」，`/txm`、`/txc` 下载时实时显示「下载模组/插件 xx%」与已下载/总字节，完成后提示
+            - TPS 也画成细进度条（20 TPS 为满格），一眼看出掉没掉 TPS
+            - 核心启动准备阶段的进度条改为单行原地刷新（`\r`），不再一行行往下滚；日志被重定向到文件时仍按步骤换行
+            - 修复上一版：浏览器/curl 上传图标走 `multipart/form-data`，原实现按请求体开头判 PNG 会误报「不是 PNG 文件」，现在从 multipart 里提取图片段（原始 PNG 也兼容）
+            - 修复上一版：Windows 上 jar 被运行中的服务器占用时报「另一个程序已锁定文件的一部分，进程无法访问」——下载与插件释放改为「先改名腾位再落盘」，实在被锁也只提示、不再中断启动
+
+            **控制面板 + 三条管理命令（Travel Panel）**
 
             - 开服后自动打开 `http://127.0.0.1:2000/`（只监听本机回环，不对外暴露）
-            - 面板左侧是在这个服玩过的人：**在线亮色、离线灰暗（0.42 透明度）**，头像自动拉取（缓存 → mc-heads/minotar → 本地按名字生成的方块头像）
-            - 面板底部是命令行：直接敲 `say 你好`、`tcp memory 8G` 等命令，以控制台身份执行，输出实时回显（增量读 `logs/latest.log`）
+            - 面板左侧是在这个服玩过的人：**在线亮色、离线灰暗（0.42 透明度）**，头像自动拉取（缓存 → mc-heads/minotar → 本地按名字生成的方块头像，断网也有脸）
+            - 面板底部是命令行：直接敲 `say 你好`、`txp memory 8G` 等命令，以控制台身份执行，输出实时回显（增量读 `logs/latest.log`）
             - 点左上角图标即可上传服务器图标，**强制校验 64×64 PNG**：32×32 会被直接拒绝并提示「图片必须是 64×64，当前是 32×32」；合格才写入 `server-icon.png`
-            - `/tcp <配置名> <值>`：改配置——`server.properties` 里有的项就写那里，否则写 `travelmc.properties`；`t`=开 `f`=关 数字=数字，**改完 3 秒后自动重启服务器**
-            - `/tcp <配置名>` 只看当前值，`/tcp` 不带参数列出两个配置文件里的全部项
-            - `/tcm <模组名>`：从 Modrinth 搜索并下载支持 NeoForge 的最新版本到 `mods/`
-            - `/tic <插件名>`：从 Modrinth 搜索并下载支持 Paper/Bukkit 的最新版本到 `plugins/`
-            - 两个下载命令都按名字打分选项目（`spark` 不会再被 `sparklogin` 抢走），版本不兼容 26.3 时会明说试过哪些项目
-            - 三个命令默认只有 OP / 控制台可用（`travelpanel.tcp` / `travelpanel.download` 权限），非 OP 改不了配置
-            - 启动脚本内存改为运行时从 `travelmc.properties` 现读：`/tcp memory 8G` 重启即生效，不用重跑核心
+            - `/txp <配置名> <值>`：改配置——`server.properties` 里有的项就写那里，否则写 `travelmc.properties`；`t`=开 `f`=关 数字=数字，**改完 3 秒后自动重启服务器**（重启后值不会被 Paper 回写覆盖）
+            - `/txp <配置名>` 只看当前值，`/txp` 不带参数列出两个配置文件里的全部项
+            - `/txm <模组名>`：从 Modrinth 搜索并下载支持 NeoForge 的最新版本到 `mods/`
+            - `/txc <插件名>`：从 Modrinth 搜索并下载支持 Paper/Bukkit 的最新版本到 `plugins/`
+            - 两个下载命令都按名字打分选项目（`spark` 不会再被 `sparklogin` 抢走），版本不支持 26.3 时会明说试过哪些项目
+            - 三个命令默认只有 OP / 控制台可用（`travelpanel.txp` / `travelpanel.download` 权限）
+            - 启动脚本内存改为运行时从 `travelmc.properties` 现读：`/txp memory 8G` 重启即生效，不用重跑核心
 
             **v1.1.0 已有：AI 助手（Travel AI）**
 
