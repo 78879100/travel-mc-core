@@ -43,6 +43,14 @@ button{background:#1d2532;color:var(--fg);border:1px solid var(--line);border-ra
 button:hover{border-color:#3a6b57;color:#fff}
 button.primary{background:#1f5c43;border-color:#2b7d5c;color:#eafff5}
 .tip{color:var(--dim);font-size:12px;padding:0 14px 8px}
+#barwrap{padding:0 16px 10px;background:var(--panel);border-bottom:1px solid var(--line)}
+#barrow{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--dim)}
+#bar{flex:1;height:8px;background:#0a0d13;border:1px solid var(--line);border-radius:5px;overflow:hidden;position:relative}
+#bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,#1f5c43,#39d98a);transition:width .25s ease}
+#bar.act i{background:linear-gradient(90deg,#8a5a1f,#ffb44d)}
+#barlbl{min-width:112px;text-align:right;font-variant-numeric:tabular-nums}
+#tpsbar{height:4px;margin-top:6px;background:#0a0d13;border-radius:3px;overflow:hidden}
+#tpsbar i{display:block;height:100%;width:0;background:var(--accent);transition:width .3s ease}
 #toast{position:fixed;right:18px;bottom:64px;background:#1c2431;border:1px solid var(--line);padding:10px 14px;border-radius:8px;font-size:13px;opacity:0;transition:.2s;pointer-events:none;max-width:340px}
 #toast.show{opacity:1}
 .hidden{display:none}
@@ -61,6 +69,13 @@ button.primary{background:#1f5c43;border-color:#2b7d5c;color:#eafff5}
     <div>运行 <b id="uptime">–</b></div>
   </div>
 </header>
+<div id="barwrap">
+  <div id="barrow">
+    <span id="barlbl">连接中 0%</span>
+    <div id="bar"><i></i></div>
+  </div>
+  <div id="tpsbar"><i></i></div>
+</div>
 <main>
   <aside>
     <h2>玩家 <em id="pcount">0</em></h2>
@@ -69,7 +84,7 @@ button.primary{background:#1f5c43;border-color:#2b7d5c;color:#eafff5}
   <div class="right">
     <div id="log"><span class="c-info">等待服务器日志…</span></div>
     <footer>
-      <input id="cmd" placeholder="输入服务器命令，直接回车执行（例：say 你好 / tcp memory 8G）" autocomplete="off">
+      <input id="cmd" placeholder="输入服务器命令，直接回车执行（例：say 你好 / txp memory 8G）" autocomplete="off">
       <button class="primary" id="send">发送</button>
     </footer>
     <input type="file" id="file" accept="image/png" class="hidden">
@@ -79,6 +94,24 @@ button.primary{background:#1f5c43;border-color:#2b7d5c;color:#eafff5}
 <script>
 const logEl=document.getElementById('log'), cmdEl=document.getElementById('cmd');
 let next=0, lastHtml='', iconShown='';
+let bootDone=false, bootTimer=null, bootPct=0;
+
+function setBar(pct,label,active){
+  document.querySelector('#bar i').style.width=Math.max(0,Math.min(100,pct))+'%';
+  document.getElementById('bar').classList.toggle('act',!!active);
+  document.getElementById('barlbl').textContent=label;
+}
+function bootStep(){
+  if(bootDone) return;
+  bootPct=Math.min(92,bootPct+7+Math.random()*9);
+  setBar(bootPct,'连接面板 '+bootPct.toFixed(0)+'%',true);
+}
+function bootFinish(){
+  if(bootDone) return;
+  bootDone=true; clearInterval(bootTimer);
+  setBar(100,'已连接 100%',false);
+  setTimeout(()=>setBar(100,'服务器运行中',false),900);
+}
 
 function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove('show'),2600);}
 function cls(line){
@@ -113,7 +146,9 @@ async function tickState(){
     document.getElementById('online').textContent=s.online;
     document.getElementById('max').textContent=s.max;
     document.getElementById('tps').textContent=Number(s.tps).toFixed(1);
+    document.getElementById('tpsbar').firstElementChild.style.width=Math.min(100,(Number(s.tps)/20)*100)+'%';
     document.getElementById('uptime').textContent=fmtUp(s.uptime);
+    bootFinish();
     setIcon(s.icon);
     document.getElementById('pcount').textContent=s.players.filter(p=>p.online).length;
     const list=s.players.slice().sort((a,b)=>(b.online-a.online)||(b.last-a.last));
@@ -137,6 +172,24 @@ async function tickLog(){
     const d=await r.json();
     if(d.next!==undefined&&d.next!==next){next=d.next;}
     addLog(d.lines||[]);
+  }catch(e){}
+}
+async function tickDl(){
+  try{
+    const r=await fetch('/api/dl',{cache:'no-store'});
+    const d=await r.json();
+    if(d.active){
+      const pct=d.percent||0;
+      const mb=(d.done/1048576).toFixed(1)+(d.total>0?' / '+(d.total/1048576).toFixed(1)+' MB':' MB');
+      setBar(pct,'下载'+(d.kind||'')+' '+pct.toFixed(0)+'%',true);
+      document.getElementById('barlbl').textContent='下载'+(d.kind||'')+' '+pct.toFixed(0)+'%';
+      document.getElementById('barlbl').title=(d.name||'')+'  '+mb;
+      bootDone=true;
+    }else if(document.getElementById('bar').classList.contains('act')){
+      setBar(100,'下载完成',false);
+      toast((d.name?d.name+' ':'')+'下载完成');
+      setTimeout(()=>setBar(100,'服务器运行中',false),1200);
+    }
   }catch(e){}
 }
 async function send(){
@@ -166,8 +219,9 @@ document.getElementById('file').onchange=async e=>{
   }catch(err){toast('上传失败：'+err);}
   e.target.value='';
 };
+bootTimer=setInterval(bootStep,260);
 tickState();tickLog();
-setInterval(tickState,2000);setInterval(tickLog,1200);
+setInterval(tickState,2000);setInterval(tickLog,1200);setInterval(tickDl,500);
 </script>
 </body>
 </html>
