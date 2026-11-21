@@ -21,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -39,7 +40,7 @@ import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
- * Travel Panel：127.0.0.1:2000 的本地控制面板 + /tcp /tcm /tic 三个管理命令。
+ * Travel Panel：127.0.0.1:2000 的本地控制面板 + /txp /txm /txc 三个管理命令。
  * 面板：在线/离线玩家列表（带头像）、实时日志、命令输入、服务器图标上传（必须 64×64 PNG）。
  */
 public class TravelPanel extends JavaPlugin implements Listener {
@@ -56,6 +57,18 @@ public class TravelPanel extends JavaPlugin implements Listener {
     private long startedAt = System.currentTimeMillis();
 
     private final Map<String, Rec> players = new ConcurrentHashMap<String, Rec>();
+
+    /** 面板进度条用的下载状态：/txm、/txc 下载时页面实时显示百分比。 */
+    static final class Dl {
+        volatile boolean active;
+        volatile String name = "";
+        volatile String kind = "";
+        volatile long done;
+        volatile long total;
+        volatile String result = "";
+    }
+
+    private final Dl dl = new Dl();
 
     private static final class Rec {
         String name;
@@ -146,6 +159,8 @@ public class TravelPanel extends JavaPlugin implements Listener {
                 avatar(ex, path.substring("/api/avatar/".length()));
             } else if (path.equals("/api/state")) {
                 sendJson(ex, stateJson());
+            } else if (path.equals("/api/dl")) {
+                sendJson(ex, dlJson());
             } else if (path.equals("/api/log")) {
                 log(ex);
             } else if (path.equals("/api/icon")) {
@@ -168,6 +183,15 @@ public class TravelPanel extends JavaPlugin implements Listener {
         } finally {
             ex.close();
         }
+    }
+
+    private String dlJson() {
+        Dl d = dl;
+        long total = d.total;
+        double pct = total > 0 ? Math.min(100.0, d.done * 100.0 / total) : (d.active ? 0 : 100);
+        return "{\"ok\":true,\"active\":" + d.active + ",\"name\":" + q(d.name)
+                + ",\"kind\":" + q(d.kind) + ",\"done\":" + d.done + ",\"total\":" + total
+                + ",\"percent\":" + (Math.round(pct * 10) / 10.0) + ",\"result\":" + q(d.result) + "}";
     }
 
     private String html() throws IOException {
@@ -462,19 +486,19 @@ public class TravelPanel extends JavaPlugin implements Listener {
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         String name = command.getName().toLowerCase();
-        if (name.equals("tcp")) {
-            return tcp(sender, args);
+        if (name.equals("txp")) {
+            return txp(sender, args);
         }
-        if (name.equals("tcm")) {
+        if (name.equals("txm")) {
             return download(sender, args, true);
         }
-        if (name.equals("tic")) {
+        if (name.equals("txc")) {
             return download(sender, args, false);
         }
         return false;
     }
 
-    private boolean tcp(CommandSender sender, String[] args) {
+    private boolean txp(CommandSender sender, String[] args) {
         Path core = root.resolve("travelmc.properties");
         Path server = root.resolve("server.properties");
         if (!Files.exists(core) && !Files.exists(server)) {
@@ -482,7 +506,7 @@ public class TravelPanel extends JavaPlugin implements Listener {
             return true;
         }
         if (args.length == 0) {
-            sender.sendMessage("§e用法：/tcp <配置名> <t=开 / f=关 / 数字>");
+            sender.sendMessage("§e用法：/txp <配置名> <t=开 / f=关 / 数字>");
             sender.sendMessage("§7（server.properties 的项写 server.properties，核心项写 travelmc.properties）");
             listKeys(sender, server, "server.properties");
             listKeys(sender, core, "travelmc.properties");
@@ -526,7 +550,7 @@ public class TravelPanel extends JavaPlugin implements Listener {
         }
         Bukkit.broadcastMessage("§e[Travel Panel] §f配置已更新：§b" + key + "§f = §a" + value
                 + "§7（" + fileName + "），3 秒后自动重启服务器");
-        getLogger().info("[面板] /tcp " + key + " = " + value + " → " + fileName + "，准备重启");
+        getLogger().info("[面板] /txp " + key + " = " + value + " → " + fileName + "，准备重启");
         Bukkit.getScheduler().runTaskLater(this, () -> Bukkit.shutdown(), 60L);
         return true;
     }
@@ -589,7 +613,7 @@ public class TravelPanel extends JavaPlugin implements Listener {
 
     private boolean download(CommandSender sender, String[] args, final boolean mod) {
         if (args.length == 0) {
-            sender.sendMessage("§e用法：" + (mod ? "/tcm <模组名>" : "/tic <插件名>"));
+            sender.sendMessage("§e用法：" + (mod ? "/txm <模组名>" : "/txc <插件名>"));
             return true;
         }
         final String query = String.join(" ", args).trim();
@@ -601,6 +625,8 @@ public class TravelPanel extends JavaPlugin implements Listener {
                 Bukkit.getScheduler().runTask(this, () -> target.sendMessage(msg));
             } catch (Exception e) {
                 String err = e.getMessage() == null ? e.toString() : e.getMessage();
+                dl.active = false;
+                dl.result = err;
                 Bukkit.getScheduler().runTask(this, () -> target.sendMessage("§c下载失败：" + err));
                 getLogger().warning("Modrinth 下载失败: " + e);
             }
@@ -688,7 +714,18 @@ public class TravelPanel extends JavaPlugin implements Listener {
                     Path dir = root.resolve(mod ? "mods" : "plugins");
                     Files.createDirectories(dir);
                     Path target = dir.resolve(filename);
-                    downloadFile(url, target);
+                    dl.kind = mod ? "模组" : "插件";
+                    dl.active = true;
+                    dl.name = filename;
+                    dl.total = 0;
+                    dl.done = 0;
+                    dl.result = "";
+                    try {
+                        downloadFile(url, target);
+                    } finally {
+                        dl.active = false;
+                    }
+                    dl.result = "已完成 " + filename;
                     long size = Files.size(target);
                     String versionName = Json.str(v, "version_number", "");
                     return "§a已下载 §f" + title + " §7" + versionName + " §8→ §f"
@@ -711,8 +748,20 @@ public class TravelPanel extends JavaPlugin implements Listener {
         if (c.getResponseCode() != 200) {
             throw new IOException("HTTP " + c.getResponseCode() + " 下载 " + url);
         }
-        try (InputStream in = c.getInputStream()) {
-            Files.copy(in, tmp, StandardCopyOption.REPLACE_EXISTING);
+        dl.name = target.getFileName().toString();
+        dl.done = 0;
+        dl.total = c.getContentLengthLong();
+        try (InputStream in = c.getInputStream();
+             OutputStream out = Files.newOutputStream(tmp,
+                     StandardOpenOption.CREATE,
+                     StandardOpenOption.TRUNCATE_EXISTING,
+                     StandardOpenOption.WRITE)) {
+            byte[] b = new byte[65536];
+            int n;
+            while ((n = in.read(b)) > 0) {
+                out.write(b, 0, n);
+                dl.done += n;
+            }
         }
         if (!safeMove(tmp, target)) {
             try {
