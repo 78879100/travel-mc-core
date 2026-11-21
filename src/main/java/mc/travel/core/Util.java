@@ -19,7 +19,7 @@ import java.util.Locale;
 public final class Util {
 
     public static final String CORE_NAME = "Travel MC Core";
-    public static final String CORE_VERSION = "1.2.0";
+    public static final String CORE_VERSION = "1.2.1";
     public static final String MC_VERSION = "26.3";
     /** 26.3 服务端要求 Java 25 及以上。 */
     public static final int MIN_JAVA = 25;
@@ -106,8 +106,8 @@ public final class Util {
     }
 
     /**
-     * 启动流程进度条：一行一条，显示 [####----] 百分比 [n/总] 步骤名。
-     * 让「准备启动」这一串步骤看起来是进度，而不是一堆散行。
+     * 启动流程进度条：带百分比的单行动态进度条。
+     * 有交互终端时用 \r 覆盖同一行；输出被重定向到文件时每步一行，避免互相覆盖。
      */
     public static final class StepBar {
 
@@ -130,14 +130,20 @@ public final class Util {
             double ratio = Math.min(1.0, shown / (double) total);
             int filled = (int) Math.round(ratio * WIDTH);
             StringBuilder sb = new StringBuilder(80);
-            sb.append("  [");
+            boolean tty = System.console() != null;
+            sb.append(tty ? "\r  [" : "  [");
             for (int i = 0; i < WIDTH; i++) {
                 sb.append(i < filled ? '#' : '-');
             }
             sb.append("] ");
             sb.append(String.format(Locale.ROOT, "%5.1f%%  ", ratio * 100.0));
             sb.append("[").append(shown).append("/").append(total).append("] ").append(title);
-            System.out.println(sb);
+            if (tty && shown < total) {
+                System.out.print(sb);
+                System.out.flush();
+            } else {
+                System.out.println(sb);
+            }
         }
     }
 
